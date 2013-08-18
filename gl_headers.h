@@ -25,11 +25,15 @@
 /* SDL on Mac */
 #include "glew.h" // use our local glew
 #include <OpenGL/gl.h>
-#endif
+
+#else
+
+#include <GL/glew.h>
 
 #ifndef WINDOWS
-#include <GL/glew.h>
 #include <GL/gl.h>
+
+#endif
 #endif
 
 #define glOrthof glOrtho
