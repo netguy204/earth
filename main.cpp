@@ -6,6 +6,7 @@
 #include "point.h"
 #include "shaders.h"
 #include "image.h"
+#include "time.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,17 +18,6 @@
 const char* libbase = ".";
 unsigned screen_width = 800;
 unsigned screen_height = 800;
-
-class TexCoord {
-public:
-  float u, v;
-
-  TexCoord(float u, float v)
-    : u(u), v(v) {
-  }
-};
-
-typedef std::vector<TexCoord> TexCoords;
 
 Program* white_program_loader() {
   Program *program = Program::create("white.vert",
@@ -140,10 +130,28 @@ int main(int argc, char** argv) {
   Matrix pole_up = Matrix::rotation(M_PI/2, Vector(1,0,0)) * Matrix::scale(0.8, 0.8, 0.8);
 
   // render loop
+  unsigned fcount = 0;
+  Time flast;
+  Time last_frame;
+
   while(true) {
+    fcount++;
+    Time now;
+
+    TimeLength dt = now - last_frame;
+    last_frame = now;
+
+    // print fps every second
+    TimeLength dt_fps = now - flast;
+    if(dt_fps > TimeLength::inSeconds(1)) {
+      printf("%f\n", fcount / dt_fps.seconds());
+      flast = now;
+      fcount = 0;
+    }
+
     Matrix m = Matrix::rotation(angle, Vector(0,1,0)) * pole_up;
 
-    angle += 0.001;
+    angle += dt.seconds() * (2 * M_PI * 0.05); // 1/20 rev per second
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

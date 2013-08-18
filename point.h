@@ -40,5 +40,16 @@ public:
 typedef Point Vector;
 typedef std::vector<Point> Points;
 
+class TexCoord {
+public:
+  float u, v;
+
+  inline TexCoord(float u, float v)
+    : u(u), v(v) {
+  }
+};
+
+typedef std::vector<TexCoord> TexCoords;
+
 
 #endif
