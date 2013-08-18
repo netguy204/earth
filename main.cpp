@@ -25,6 +25,7 @@ Program* white_program_loader() {
                                      GLPARAM_VERTEX, "vertex",
                                      GLPARAM_NORMAL0, "normal",
                                      GLPARAM_TEXCOORD0, "tcoord0",
+                                     GLPARAM_TANGENT0, "tangent",
                                      GLPARAM_DONE);
 
   program_bind_uniforms(program,
@@ -66,10 +67,11 @@ int main(int argc, char** argv) {
   glViewport(0, 0, screen_width, screen_height);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  GLuint vbuffer, tbuffer, nbuffer;
+  GLuint vbuffer, tbuffer, nbuffer, tanbuffer;
   gl_check(glGenBuffers(1, &vbuffer));
   gl_check(glGenBuffers(1, &tbuffer));
   gl_check(glGenBuffers(1, &nbuffer));
+  gl_check(glGenBuffers(1, &tanbuffer));
 
   unsigned lats = 360;
   unsigned lons = 360;
@@ -78,9 +80,11 @@ int main(int argc, char** argv) {
 
   Points points;
   Points normals;
+  Points tangents;
   TexCoords tcoords;
 
   float alt = 0;
+  Vector axis(0,0,1);
 
   for(unsigned ilat = 0; ilat < lats; ++ilat) {
     float hlat = -M_PI/2 + lat_step * ilat;
@@ -99,28 +103,40 @@ int main(int argc, char** argv) {
 
       points.push_back(Point::fromLatLon(hlat, hlon, alt));
       tcoords.push_back(TexCoord(rhlon, rhlat));
-      normals.push_back(Point::fromLatLon(hlat, hlon, alt).norm());
+      Vector n1 = Point::fromLatLon(hlat, hlon, alt).norm();
+      normals.push_back(n1);
+      tangents.push_back(axis.cross(n1));
 
       points.push_back(Point::fromLatLon(nlat, hlon, alt));
       tcoords.push_back(TexCoord(rhlon, rnlat));
-      normals.push_back(Point::fromLatLon(nlat, hlon, alt).norm());
+      Vector n2 = Point::fromLatLon(nlat, hlon, alt).norm();
+      normals.push_back(n2);
+      tangents.push_back(axis.cross(n2));
 
       points.push_back(Point::fromLatLon(nlat, nlon, alt));
       tcoords.push_back(TexCoord(rnlon, rnlat));
-      normals.push_back(Point::fromLatLon(nlat, nlon, alt).norm());
+      Vector n3 = Point::fromLatLon(nlat, nlon, alt).norm();
+      normals.push_back(n3);
+      tangents.push_back(axis.cross(n3));
 
 
       points.push_back(Point::fromLatLon(nlat, nlon, alt));
       tcoords.push_back(TexCoord(rnlon, rnlat));
-      normals.push_back(Point::fromLatLon(nlat, nlon, alt).norm());
+      Vector n4 = Point::fromLatLon(nlat, nlon, alt).norm();
+      normals.push_back(n4);
+      tangents.push_back(axis.cross(n4));
 
       points.push_back(Point::fromLatLon(hlat, nlon, alt));
       tcoords.push_back(TexCoord(rnlon, rhlat));
-      normals.push_back(Point::fromLatLon(hlat, nlon, alt).norm());
+      Vector n5 = Point::fromLatLon(hlat, nlon, alt).norm();
+      normals.push_back(n5);
+      tangents.push_back(axis.cross(n5));
 
       points.push_back(Point::fromLatLon(hlat, hlon, alt));
       tcoords.push_back(TexCoord(rhlon, rhlat));
-      normals.push_back(Point::fromLatLon(hlat, hlon, alt).norm());
+      Vector n6 = Point::fromLatLon(hlat, hlon, alt).norm();
+      normals.push_back(n6);
+      tangents.push_back(axis.cross(n6));
     }
   }
 
@@ -151,6 +167,13 @@ int main(int argc, char** argv) {
   gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(TexCoord) * tcoords.size(),
                         (float*)&tcoords[0], GL_DYNAMIC_DRAW));
   gl_check(glVertexAttribPointer(GLPARAM_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 0, 0));
+
+  // tangents
+  gl_check(glEnableVertexAttribArray(GLPARAM_TANGENT0));
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, tanbuffer));
+  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * tangents.size(),
+                        (float*)&tangents[0], GL_DYNAMIC_DRAW));
+  gl_check(glVertexAttribPointer(GLPARAM_TANGENT0, 3, GL_FLOAT, GL_FALSE, 0, 0));
 
   float angle = 0;
 
