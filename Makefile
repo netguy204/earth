@@ -1,15 +1,15 @@
 OBJS=\
-	utils.o main.o glew.o stb_image.o
+	utils.o main.o stb_image.o
 
 CFLAGS+=
 LDFLAGS+=
 
 PLATFORM:=$(shell uname)
 ifeq ($(PLATFORM), Darwin)
-	OBJS+=SDLMain.o
+	OBJS+=SDLMain.o glew.o
 	LDFLAGS+=-framework OpenGL -framework SDL -framework Cocoa
 else
-	LDFLAGS+=-lGL -lm -lutil `sdl-config --libs` -ldl
+	LDFLAGS+=-lGL -lm -lutil `sdl-config --libs` -ldl -lGLEW
 	CFLAGS+=`sdl-config --cflags`
 endif
 

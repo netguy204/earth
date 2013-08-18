@@ -23,15 +23,15 @@
 #ifdef BUILD_SDL
 #ifdef __APPLE__
 /* SDL on Mac */
-#include "glew.h"
+#include "glew.h" // use our local glew
 #include <OpenGL/gl.h>
-#else
-/* SDL on linux */
-#include <GL/glew.h>
+#endif
+
 #ifndef WINDOWS
+#include <GL/glew.h>
 #include <GL/gl.h>
 #endif
-#endif
+
 #define glOrthof glOrtho
 
 #else

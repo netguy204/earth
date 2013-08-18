@@ -2,6 +2,7 @@
 #define MATRIX_H
 
 #include "point.h"
+#include <string.h>
 
 class Matrix {
 public:
