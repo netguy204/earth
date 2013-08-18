@@ -16,6 +16,18 @@ public:
     memcpy(data, ident, sizeof(ident));
   }
 
+  inline static Matrix rotation(float angle, const Vector& v) {
+    Matrix m;
+    m.set_rotation(angle, v);
+    return m;
+  }
+
+  inline static Matrix scale(float x, float y, float z) {
+    Matrix m;
+    m.set_scale(x, y, z);
+    return m;
+  }
+
   inline float& elm(unsigned r, unsigned c) {
     return data[c*4+r];
   }

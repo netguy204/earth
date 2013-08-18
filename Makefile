@@ -1,7 +1,8 @@
 OBJS=\
-	utils.o main.o stb_image.o
+	utils.o main.o stb_image.o shaders.o
 
-CFLAGS+=
+CFLAGS+=-DBUILD_SDL
+
 LDFLAGS+=
 
 PLATFORM:=$(shell uname)
