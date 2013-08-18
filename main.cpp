@@ -28,8 +28,10 @@ Program* white_program_loader() {
                                      GLPARAM_DONE);
 
   program_bind_uniforms(program,
-                        UNIFORM_TEX0, "textureUnit0",
-                        UNIFORM_TEX1, "textureUnit1",
+                        UNIFORM_TEX0, "colors",
+                        UNIFORM_TEX1, "topo",
+                        UNIFORM_TEX2, "specular",
+                        UNIFORM_TEX3, "night_lights",
                         UNIFORM_MVP, "mvp",
                         UNIFORM_DONE);
 
@@ -124,6 +126,8 @@ int main(int argc, char** argv) {
 
   Texture* colors = Texture::from_file("world.png");
   Texture* topo = Texture::from_file("topo.png");
+  Texture* specular = Texture::from_file("EarthSpec.png");
+  Texture* night_lights = Texture::from_file("earth_lights.png");
 
   float angle = 0;
 
@@ -194,6 +198,12 @@ int main(int argc, char** argv) {
 
     topo->bind(1);
     gl_check(glUniform1i(prog->requireUniform(UNIFORM_TEX1), 1));
+
+    specular->bind(2);
+    gl_check(glUniform1i(prog->requireUniform(UNIFORM_TEX2), 2));
+
+    night_lights->bind(3);
+    gl_check(glUniform1i(prog->requireUniform(UNIFORM_TEX3), 3));
 
     gl_check(glUniformMatrix4fv(prog->requireUniform(UNIFORM_MVP), 1, GL_FALSE, m.data));
 

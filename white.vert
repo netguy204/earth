@@ -1,4 +1,4 @@
-uniform sampler2D textureUnit1;
+uniform sampler2D topo;
 
 attribute vec3 vertex;
 attribute vec3 normal;
@@ -11,7 +11,8 @@ varying vec3 vvertex;
 
 void main() {
   tcoord = tcoord0;
-  vnormal = normal;
-  vvertex = vertex + normal * length(texture2D(textureUnit1, tcoord0)) * 0.025;
-  gl_Position = mvp * vec4(vvertex, 1);
+  vnormal = mat3(mvp) * normal;
+  vvertex = mat3(mvp) * (vertex - normal * length(texture2D(topo, tcoord0)) * 0.025);
+
+  gl_Position = vec4(vvertex, 1);
 }

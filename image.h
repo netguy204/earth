@@ -4,6 +4,42 @@
 #include "stb_image.h"
 #include "utils.h"
 
+class Image {
+public:
+  int w;
+  int h;
+  int ch;
+  unsigned char* data;
+
+  inline Image(unsigned w, unsigned h, unsigned ch) {
+    size_t sz = w * h * ch;
+    if(sz > 0) {
+      data = (unsigned char*)malloc(sz);
+    } else {
+      data = NULL;
+    }
+  }
+
+  inline ~Image() {
+    if(data) free(data);
+  }
+
+  inline static Image* from_file(const char* fname) {
+    Image* im = new Image(0, 0, 0);
+    im->data = stbi_load(fname, &im->w, &im->h, &im->ch, 0);
+    if(!im->data) fail_exit("failed to load %s", fname);
+    return im;
+  }
+
+  inline unsigned char elm(unsigned x, unsigned y, unsigned c) const {
+    return data[y * (w*ch) + (x*ch) + c];
+  }
+
+  inline unsigned char& elm(unsigned x, unsigned y, unsigned c) {
+    return data[y * (w*ch) + (x*ch) + c];
+  }
+};
+
 class Texture {
 public:
   GLuint texture;
@@ -24,22 +60,28 @@ public:
     glBindTexture(GL_TEXTURE_2D, 0);
   }
 
+  inline ~Texture() {
+    glDeleteTextures(1, &texture);
+  }
+
   static inline Texture* from_file(const char* fname) {
-    int w, h, c;
-    unsigned char* data = stbi_load(fname, &w, &h, &c, 0);
-    if(!data) fail_exit("failed to load %s", fname);
+    Image* im = Image::from_file(fname);
+    Texture* tex = Texture::from_image(im);
+    delete im;
+    return tex;
+  }
+
+  static inline Texture* from_image(Image* im) {
     GLuint kind;
-    if(c == 3) {
+    if(im->ch == 3) {
       kind = GL_RGB;
-    } else if(c == 4) {
+    } else if(im->ch == 4) {
       kind = GL_RGBA;
     } else {
-      fail_exit("don't know how to handle an image with %d channels", c);
+      fail_exit("don't know how to handle an image with %d channels", im->ch);
     }
 
-    Texture* tex = new Texture(w, h, kind, data);
-    free(data);
-    return tex;
+    return new Texture(im->w, im->h, kind, im->data);
   }
 
   inline void bind(unsigned unit) {
