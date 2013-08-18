@@ -4,6 +4,8 @@
 #include "stb_image.h"
 #include "utils.h"
 
+#include <stdlib.h>
+
 class Image {
 public:
   int w;

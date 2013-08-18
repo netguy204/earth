@@ -1,6 +1,9 @@
 #include "shaders.h"
 #include "utils.h"
 
+#include <stdlib.h>
+#include <stdarg.h>
+
 void gl_check_(const char * msg) {
   GLenum error = glGetError();
   if(error == GL_NO_ERROR) return;

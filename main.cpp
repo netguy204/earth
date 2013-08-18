@@ -29,9 +29,9 @@ Program* white_program_loader() {
 
   program_bind_uniforms(program,
                         UNIFORM_TEX0, "colors",
-                        UNIFORM_TEX1, "topo",
-                        UNIFORM_TEX2, "specular",
-                        UNIFORM_TEX3, "night_lights",
+                        UNIFORM_TEX1, "specular",
+                        UNIFORM_TEX2, "night_lights",
+                        UNIFORM_TEX3, "normal_map",
                         UNIFORM_MVP, "mvp",
                         UNIFORM_DONE);
 
@@ -125,9 +125,32 @@ int main(int argc, char** argv) {
   }
 
   Texture* colors = Texture::from_file("world.png");
-  Texture* topo = Texture::from_file("topo.png");
   Texture* specular = Texture::from_file("EarthSpec.png");
   Texture* night_lights = Texture::from_file("earth_lights.png");
+  Texture* normal_map = Texture::from_file("EarthNormal.png");
+
+  // bind all of our constant data
+
+  // verts
+  gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, vbuffer));
+  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * points.size(),
+                        (float*)&points[0], GL_DYNAMIC_DRAW));
+  gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
+
+  // normals
+  gl_check(glEnableVertexAttribArray(GLPARAM_NORMAL0));
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, nbuffer));
+  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * normals.size(),
+                        (float*)&points[0], GL_DYNAMIC_DRAW));
+  gl_check(glVertexAttribPointer(GLPARAM_NORMAL0, 3, GL_FLOAT, GL_FALSE, 0, 0));
+
+  // texs
+  gl_check(glEnableVertexAttribArray(GLPARAM_TEXCOORD0));
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, tbuffer));
+  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(TexCoord) * tcoords.size(),
+                        (float*)&tcoords[0], GL_DYNAMIC_DRAW));
+  gl_check(glVertexAttribPointer(GLPARAM_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 0, 0));
 
   float angle = 0;
 
@@ -172,37 +195,18 @@ int main(int argc, char** argv) {
     }
 
     prog->use();
-    // verts
-    gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
-    gl_check(glBindBuffer(GL_ARRAY_BUFFER, vbuffer));
-    gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * points.size(),
-                          (float*)&points[0], GL_DYNAMIC_DRAW));
-    gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
 
-    // normals
-    gl_check(glEnableVertexAttribArray(GLPARAM_NORMAL0));
-    gl_check(glBindBuffer(GL_ARRAY_BUFFER, nbuffer));
-    gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * normals.size(),
-                          (float*)&points[0], GL_DYNAMIC_DRAW));
-    gl_check(glVertexAttribPointer(GLPARAM_NORMAL0, 3, GL_FLOAT, GL_FALSE, 0, 0));
-
-    // texs
-    gl_check(glEnableVertexAttribArray(GLPARAM_TEXCOORD0));
-    gl_check(glBindBuffer(GL_ARRAY_BUFFER, tbuffer));
-    gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(TexCoord) * tcoords.size(),
-                          (float*)&tcoords[0], GL_DYNAMIC_DRAW));
-    gl_check(glVertexAttribPointer(GLPARAM_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 0, 0));
-
+    // textures
     colors->bind(0);
     gl_check(glUniform1i(prog->requireUniform(UNIFORM_TEX0), 0));
 
-    topo->bind(1);
+    specular->bind(1);
     gl_check(glUniform1i(prog->requireUniform(UNIFORM_TEX1), 1));
 
-    specular->bind(2);
+    night_lights->bind(2);
     gl_check(glUniform1i(prog->requireUniform(UNIFORM_TEX2), 2));
 
-    night_lights->bind(3);
+    normal_map->bind(3);
     gl_check(glUniform1i(prog->requireUniform(UNIFORM_TEX3), 3));
 
     gl_check(glUniformMatrix4fv(prog->requireUniform(UNIFORM_MVP), 1, GL_FALSE, m.data));
