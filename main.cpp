@@ -291,10 +291,6 @@ int main(int argc, char** argv) {
   glViewport(0, 0, screen_width, screen_height);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  GLuint vao;
-  gl_check(glGenVertexArraysAPPLE(1, &vao));
-  gl_check(glBindVertexArrayAPPLE(vao));
-
   GLuint vbuffer, tbuffer, nbuffer;
   gl_check(glGenBuffers(1, &vbuffer));
   gl_check(glGenBuffers(1, &tbuffer));
