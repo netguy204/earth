@@ -17,7 +17,7 @@ void main() {
   // the eye
   vec3 reflection = reflect(-lightDir, normal);
   float eyeReflectionAngle = max(0.0, dot(reflection, eyeDir));
-  float specCoeff = 2.2 * texture2D(specular, tcoord).a;
+  float specCoeff = max(1, 2.2 * texture2D(specular, tcoord).a);
   float spec = min(1.0, pow(eyeReflectionAngle, specCoeff));
   vec4 spec_color = vec4(1,1,0.8,1);
 

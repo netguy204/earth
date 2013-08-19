@@ -19,7 +19,7 @@ public:
   // angles in radians
   inline static Point fromLatLon(double lat, double lon, double h = 0) {
     float Rn = 1;
-    float E = 0;
+    float E = 0.081819190842621;
 
     float x = (Rn + h) * cos(lat) * cos(lon);
     float y = (Rn + h) * cos(lat) * sin(lon);

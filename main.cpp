@@ -39,6 +39,19 @@ Program* white_program_loader() {
   return program;
 }
 
+Program* skybox_program_loader() {
+  Program* program = Program::create("skybox.vert",
+                                     "skybox.frag",
+                                     GLPARAM_VERTEX, "vertex",
+                                     GLPARAM_DONE);
+
+  program_bind_uniforms(program,
+                        UNIFORM_TEX0, "colors",
+                        UNIFORM_MVP, "mvp",
+                        UNIFORM_DONE);
+  return program;
+}
+
 int main(int argc, char** argv) {
   if(SDL_Init(SDL_INIT_VIDEO) < 0) {
     fail_exit("unable to init SDL: %s\n", SDL_GetError());
@@ -73,8 +86,8 @@ int main(int argc, char** argv) {
   gl_check(glGenBuffers(1, &nbuffer));
   gl_check(glGenBuffers(1, &tanbuffer));
 
-  unsigned lats = 360;
-  unsigned lons = 360;
+  unsigned lats = 30;
+  unsigned lons = 30;
   double lat_step = M_PI / lats;
   double lon_step = 2 * M_PI / lons;
 
