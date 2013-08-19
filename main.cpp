@@ -19,9 +19,9 @@ const char* libbase = ".";
 unsigned screen_width = 800;
 unsigned screen_height = 800;
 
-Program* white_program_loader() {
-  Program *program = Program::create("white.vert",
-                                     "white.frag",
+Program* ads_program_loader() {
+  Program *program = Program::create("ads.vert",
+                                     "ads.frag",
                                      GLPARAM_VERTEX, "vertex",
                                      GLPARAM_NORMAL0, "normal",
                                      GLPARAM_TEXCOORD0, "tcoord0",
@@ -68,7 +68,8 @@ int main(int argc, char** argv) {
     fail_exit("failed to initialize GLEW");
   }
 
-  Program* prog = get_program(white_program_loader);
+  Program* ads = get_program(ads_program_loader);
+  Program* skybox = get_program(skybox_program_loader);
 
   SDL_WM_SetCaption("Chuckle", NULL);
 
@@ -153,43 +154,53 @@ int main(int argc, char** argv) {
     }
   }
 
+  // bind all of our constant data
+
+  // verts
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, vbuffer));
+  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * points.size(),
+                        (float*)&points[0], GL_DYNAMIC_DRAW));
+  // normals
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, nbuffer));
+  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * normals.size(),
+                        (float*)&points[0], GL_DYNAMIC_DRAW));
+  // texs
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, tbuffer));
+  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(TexCoord) * tcoords.size(),
+                        (float*)&tcoords[0], GL_DYNAMIC_DRAW));
+  // tangents
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, tanbuffer));
+  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * tangents.size(),
+                        (float*)&tangents[0], GL_DYNAMIC_DRAW));
+
   Texture* colors = Texture::from_file("world.png");
   Texture* specular = Texture::from_file("EarthSpec.png");
   Texture* night_lights = Texture::from_file("earth_lights.png");
   Texture* normal_map = Texture::from_file("EarthNormal.png");
+  CubeMap* stars = CubeMap::from_files("purplenebula_left.jpg",
+                                       "purplenebula_right.jpg",
+                                       "purplenebula_front.jpg",
+                                       "purplenebula_back.jpg",
+                                       "purplenebula_top.jpg",
+                                       "purplenebula_top.jpg");
 
-  // bind all of our constant data
+  // build a full screen quad
+  float qpoints[] = {
+    -1, -1, 0.9,
+    -1, 1, 0.9,
+    1, 1, 0.9,
 
-  // verts
-  gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
-  gl_check(glBindBuffer(GL_ARRAY_BUFFER, vbuffer));
-  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * points.size(),
-                        (float*)&points[0], GL_DYNAMIC_DRAW));
-  gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
+    1, 1, 0.9,
+    1, -1, 0.9,
+    -1, -1, 0.9
+  };
 
-  // normals
-  gl_check(glEnableVertexAttribArray(GLPARAM_NORMAL0));
-  gl_check(glBindBuffer(GL_ARRAY_BUFFER, nbuffer));
-  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * normals.size(),
-                        (float*)&points[0], GL_DYNAMIC_DRAW));
-  gl_check(glVertexAttribPointer(GLPARAM_NORMAL0, 3, GL_FLOAT, GL_FALSE, 0, 0));
-
-  // texs
-  gl_check(glEnableVertexAttribArray(GLPARAM_TEXCOORD0));
-  gl_check(glBindBuffer(GL_ARRAY_BUFFER, tbuffer));
-  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(TexCoord) * tcoords.size(),
-                        (float*)&tcoords[0], GL_DYNAMIC_DRAW));
-  gl_check(glVertexAttribPointer(GLPARAM_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 0, 0));
-
-  // tangents
-  gl_check(glEnableVertexAttribArray(GLPARAM_TANGENT0));
-  gl_check(glBindBuffer(GL_ARRAY_BUFFER, tanbuffer));
-  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * tangents.size(),
-                        (float*)&tangents[0], GL_DYNAMIC_DRAW));
-  gl_check(glVertexAttribPointer(GLPARAM_TANGENT0, 3, GL_FLOAT, GL_FALSE, 0, 0));
+  GLuint qverts;
+  glGenBuffers(1, &qverts);
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, qverts));
+  gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(qpoints), qpoints, GL_DYNAMIC_DRAW));
 
   float angle = 0;
-
   Matrix pole_up = Matrix::rotation(M_PI/2, Vector(1,0,0)) * Matrix::scale(0.8, 0.8, 0.8);
 
   // render loop
@@ -230,27 +241,64 @@ int main(int argc, char** argv) {
       }
     }
 
-    prog->use();
+    ads->use();
+
+    // attributes
+    gl_check(glBindBuffer(GL_ARRAY_BUFFER, vbuffer));
+    gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
+    gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
+
+    gl_check(glBindBuffer(GL_ARRAY_BUFFER, nbuffer));
+    gl_check(glEnableVertexAttribArray(GLPARAM_NORMAL0));
+    gl_check(glVertexAttribPointer(GLPARAM_NORMAL0, 3, GL_FLOAT, GL_FALSE, 0, 0));
+
+    gl_check(glBindBuffer(GL_ARRAY_BUFFER, tbuffer));
+    gl_check(glEnableVertexAttribArray(GLPARAM_TEXCOORD0));
+    gl_check(glVertexAttribPointer(GLPARAM_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 0, 0));
+
+    gl_check(glBindBuffer(GL_ARRAY_BUFFER, tanbuffer));
+    gl_check(glEnableVertexAttribArray(GLPARAM_TANGENT0));
+    gl_check(glVertexAttribPointer(GLPARAM_TANGENT0, 3, GL_FLOAT, GL_FALSE, 0, 0));
 
     // textures
     colors->bind(0);
-    gl_check(glUniform1i(prog->requireUniform(UNIFORM_TEX0), 0));
+    gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX0), 0));
 
     specular->bind(1);
-    gl_check(glUniform1i(prog->requireUniform(UNIFORM_TEX1), 1));
+    gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX1), 1));
 
     night_lights->bind(2);
-    gl_check(glUniform1i(prog->requireUniform(UNIFORM_TEX2), 2));
+    gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX2), 2));
 
     normal_map->bind(3);
-    gl_check(glUniform1i(prog->requireUniform(UNIFORM_TEX3), 3));
+    gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX3), 3));
 
-    gl_check(glUniformMatrix4fv(prog->requireUniform(UNIFORM_MVP), 1, GL_FALSE, m.data));
-
+    gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_MVP), 1, GL_FALSE, m.data));
     gl_check(glDrawArrays(GL_TRIANGLES, 0, points.size()));
 
-    SDL_GL_SwapBuffers();
 
+    gl_check(glDisableVertexAttribArray(GLPARAM_VERTEX));
+    gl_check(glDisableVertexAttribArray(GLPARAM_NORMAL0));
+    gl_check(glDisableVertexAttribArray(GLPARAM_TEXCOORD0));
+    gl_check(glDisableVertexAttribArray(GLPARAM_TANGENT0));
+
+
+    // render the skybox
+    skybox->use();
+
+    gl_check(glBindBuffer(GL_ARRAY_BUFFER, qverts));
+    gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
+    gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
+
+    // hack... slow down the stars
+    m = Matrix::rotation(angle*0.2, Vector(0,1,0)) * pole_up;
+
+    stars->bind(0);
+    gl_check(glUniform1i(skybox->requireUniform(UNIFORM_TEX0), 0));
+    gl_check(glUniformMatrix4fv(skybox->requireUniform(UNIFORM_MVP), 1, GL_FALSE, m.data));
+    gl_check(glDrawArrays(GL_TRIANGLES, 0, 6));
+
+    SDL_GL_SwapBuffers();
   }
 
   return 0;
