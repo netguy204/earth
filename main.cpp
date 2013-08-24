@@ -7,6 +7,7 @@
 #include "shaders.h"
 #include "image.h"
 #include "time.h"
+#include "camera.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,8 +17,8 @@
 #include <vector>
 
 const char* libbase = ".";
-unsigned screen_width = 800;
-unsigned screen_height = 800;
+unsigned screen_width = 1200;
+unsigned screen_height = 1200;
 
 Program* ads_program_loader() {
   Program *program = Program::create("ads.vert",
@@ -34,6 +35,8 @@ Program* ads_program_loader() {
                         UNIFORM_TEX2, "night_lights",
                         UNIFORM_TEX3, "normal_map",
                         UNIFORM_MVP, "mvp",
+                        UNIFORM_PERSPECTIVE, "perspective",
+                        UNIFORM_EYE, "eye",
                         UNIFORM_DONE);
 
   return program;
@@ -52,7 +55,102 @@ Program* skybox_program_loader() {
   return program;
 }
 
+GLuint vbuffer, tbuffer, nbuffer, tanbuffer, qverts;
+Program *ads;
+Program *skybox;
+
+Texture* colors;
+Texture* specular;
+Texture* night_lights;
+Texture* normal_map;
+CubeMap* stars;
+
+float angle;
+unsigned points_size;
+Camera camera(d2r(35), float(screen_width) / float(screen_height),
+              1.0, 1000.0);
+Matrix perspective(camera.getPerspectiveTransform());
+
+void render_frame(const TimeLength& dt) {
+  Matrix pole_up = Matrix::rotation(M_PI/2, Vector(1,0,0));
+  Matrix o2w = Matrix::rotation(angle, Vector(0,1,0)) * pole_up;
+  Matrix m = camera.getCameraToWorld().invertspecial() * o2w;
+
+  angle += dt.seconds() * (2 * M_PI * 0.05); // 1/20 rev per second
+
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  ads->use();
+
+  // attributes
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, vbuffer));
+  gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
+  gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
+
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, nbuffer));
+  gl_check(glEnableVertexAttribArray(GLPARAM_NORMAL0));
+  gl_check(glVertexAttribPointer(GLPARAM_NORMAL0, 3, GL_FLOAT, GL_FALSE, 0, 0));
+
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, tbuffer));
+  gl_check(glEnableVertexAttribArray(GLPARAM_TEXCOORD0));
+  gl_check(glVertexAttribPointer(GLPARAM_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 0, 0));
+
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, tanbuffer));
+  gl_check(glEnableVertexAttribArray(GLPARAM_TANGENT0));
+  gl_check(glVertexAttribPointer(GLPARAM_TANGENT0, 3, GL_FLOAT, GL_FALSE, 0, 0));
+
+  // textures
+  colors->bind(0);
+  gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX0), 0));
+
+  specular->bind(1);
+  gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX1), 1));
+
+  night_lights->bind(2);
+  gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX2), 2));
+
+  normal_map->bind(3);
+  gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX3), 3));
+
+  gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_MVP), 1, GL_FALSE, m.data));
+  gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_PERSPECTIVE), 1, GL_FALSE, perspective.data));
+  gl_check(glUniform3fv(ads->requireUniform(UNIFORM_EYE), 1, (float*)&camera.pos));
+  gl_check(glDrawArrays(GL_TRIANGLES, 0, points_size));
+
+
+  gl_check(glDisableVertexAttribArray(GLPARAM_VERTEX));
+  gl_check(glDisableVertexAttribArray(GLPARAM_NORMAL0));
+  gl_check(glDisableVertexAttribArray(GLPARAM_TEXCOORD0));
+  gl_check(glDisableVertexAttribArray(GLPARAM_TANGENT0));
+
+
+  // render the skybox
+  skybox->use();
+
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, qverts));
+  gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
+  gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
+
+  // hack... slow down the stars
+  m = Matrix::rotation(angle*0.2, Vector(0,1,0)) * pole_up;
+
+  stars->bind(0);
+  gl_check(glUniform1i(skybox->requireUniform(UNIFORM_TEX0), 0));
+  gl_check(glUniformMatrix4fv(skybox->requireUniform(UNIFORM_MVP), 1, GL_FALSE, m.data));
+  gl_check(glDrawArrays(GL_TRIANGLES, 0, 6));
+
+  SDL_GL_SwapBuffers();
+}
+
 int main(int argc, char** argv) {
+  char* output_prefix = NULL;
+  int output_frames = 0;
+
+  if(argc == 3) {
+    output_prefix = argv[1];
+    output_frames = atoi(argv[2]);
+  }
+
   if(SDL_Init(SDL_INIT_VIDEO) < 0) {
     fail_exit("unable to init SDL: %s\n", SDL_GetError());
   }
@@ -68,8 +166,8 @@ int main(int argc, char** argv) {
     fail_exit("failed to initialize GLEW");
   }
 
-  Program* ads = get_program(ads_program_loader);
-  Program* skybox = get_program(skybox_program_loader);
+  ads = get_program(ads_program_loader);
+  skybox = get_program(skybox_program_loader);
 
   SDL_WM_SetCaption("Chuckle", NULL);
 
@@ -81,14 +179,13 @@ int main(int argc, char** argv) {
   glViewport(0, 0, screen_width, screen_height);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  GLuint vbuffer, tbuffer, nbuffer, tanbuffer;
   gl_check(glGenBuffers(1, &vbuffer));
   gl_check(glGenBuffers(1, &tbuffer));
   gl_check(glGenBuffers(1, &nbuffer));
   gl_check(glGenBuffers(1, &tanbuffer));
 
-  unsigned lats = 30;
-  unsigned lons = 30;
+  unsigned lats = 90;
+  unsigned lons = 90;
   double lat_step = M_PI / lats;
   double lon_step = 2 * M_PI / lons;
 
@@ -173,16 +270,18 @@ int main(int argc, char** argv) {
   gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * tangents.size(),
                         (float*)&tangents[0], GL_DYNAMIC_DRAW));
 
-  Texture* colors = Texture::from_file("world.png");
-  Texture* specular = Texture::from_file("EarthSpec.png");
-  Texture* night_lights = Texture::from_file("earth_lights.png");
-  Texture* normal_map = Texture::from_file("EarthNormal.png");
-  CubeMap* stars = CubeMap::from_files("purplenebula_left.jpg",
-                                       "purplenebula_right.jpg",
-                                       "purplenebula_front.jpg",
-                                       "purplenebula_back.jpg",
-                                       "purplenebula_top.jpg",
-                                       "purplenebula_top.jpg");
+  points_size = points.size();
+
+  colors = Texture::from_file("world.png");
+  specular = Texture::from_file("EarthSpec.png");
+  night_lights = Texture::from_file("earth_lights.png");
+  normal_map = Texture::from_file("EarthNormal.png");
+  stars = CubeMap::from_files("purplenebula_left.jpg",
+                              "purplenebula_right.jpg",
+                              "purplenebula_top.jpg",
+                              "purplenebula_top.jpg",
+                              "purplenebula_front.jpg",
+                              "purplenebula_back.jpg");
 
   // build a full screen quad
   float qpoints[] = {
@@ -195,111 +294,134 @@ int main(int argc, char** argv) {
     -1, -1, 0.99
   };
 
-  GLuint qverts;
   glGenBuffers(1, &qverts);
   gl_check(glBindBuffer(GL_ARRAY_BUFFER, qverts));
   gl_check(glBufferData(GL_ARRAY_BUFFER, sizeof(qpoints), qpoints, GL_DYNAMIC_DRAW));
 
-  float angle = 0;
-  Matrix pole_up = Matrix::rotation(M_PI/2, Vector(1,0,0)) * Matrix::scale(0.8, 0.8, 0.8);
+  angle = 0;
 
   // render loop
   unsigned fcount = 0;
   Time flast;
   Time last_frame;
 
+  FBO* fbo = NULL;
+  if(output_prefix) {
+    fbo = new FBO(screen_width, screen_height, GL_RGBA);
+  }
+
+  unsigned frame = 0;
+  camera.pos = Vector(0, 0, -10);
+  camera.look = Vector(0, 0, -1);
+  camera.up = Vector(0, 1, 0);
+  perspective.print();
+  printf("\n");
+
+  Matrix c(camera.getCameraToWorld().invertspecial());
+  c.print();
+  printf("\n");
+
+  (perspective * c * Vector4(0, 0, -4, 1)).print();
+  (perspective * c * Vector4(0, 0, -3, 1)).print();
+  (perspective * c * Vector4(0, 0, -2, 1)).print();
+  (perspective * c * Vector4(0, 0, -1, 1)).print();
+  (perspective * c * Vector4(0, 0, 0, 1)).print();
+  (perspective * c * Vector4(0, 0, 1, 1)).print();
+  (perspective * c * Vector4(0, 0, 2, 1)).print();
+  (perspective * c * Vector4(0, 0, 3, 1)).print();
+  (perspective * c * Vector4(0, 0, 4, 1)).print();
+
+  bool left = false;
+  bool right = false;
+  bool up = false;
+  bool down = false;
+
   while(true) {
-    fcount++;
-    Time now;
-
-    TimeLength dt = now - last_frame;
-    last_frame = now;
-
-    // print fps every second
-    TimeLength dt_fps = now - flast;
-    if(dt_fps > TimeLength::inSeconds(1)) {
-      printf("%f\n", fcount / dt_fps.seconds());
-      flast = now;
-      fcount = 0;
-    }
-
-    Matrix m = Matrix::rotation(angle, Vector(0,1,0)) * pole_up;
-
-    angle += dt.seconds() * (2 * M_PI * 0.05); // 1/20 rev per second
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     SDL_Event event;
     /* pump the events */
     while(SDL_PollEvent(&event)) {
       switch(event.type) {
       case SDL_QUIT:
-        return 0;
+        exit(0);
+        break;
+      case SDL_KEYDOWN:
+        switch(event.key.keysym.sym) {
+        case SDLK_LEFT: left = true; break;
+        case SDLK_RIGHT: right = true; break;
+        case SDLK_UP: up = true; break;
+        case SDLK_DOWN: down = true; break;
+        default: break;
+        }
+        break;
+      case SDL_KEYUP:
+        switch(event.key.keysym.sym) {
+        case SDLK_LEFT: left = false; break;
+        case SDLK_RIGHT: right = false; break;
+        case SDLK_UP: up = false; break;
+        case SDLK_DOWN: down = false; break;
+        default: break;
+        }
         break;
       default:
         break;
       }
     }
 
-    ads->use();
+    fcount++;
+    Time now;
 
-    // attributes
-    gl_check(glBindBuffer(GL_ARRAY_BUFFER, vbuffer));
-    gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
-    gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
+    TimeLength dt;
+    if(fbo) {
+      dt = TimeLength::inSeconds(1.0/60.0);
+    } else {
+      dt = now - last_frame;
+    }
+    last_frame = now;
 
-    gl_check(glBindBuffer(GL_ARRAY_BUFFER, nbuffer));
-    gl_check(glEnableVertexAttribArray(GLPARAM_NORMAL0));
-    gl_check(glVertexAttribPointer(GLPARAM_NORMAL0, 3, GL_FLOAT, GL_FALSE, 0, 0));
+    float speed = 5.0;
+    float speedx = 0;
+    float speedz = 0;
+    if(left) speedx = -speed;
+    if(right) speedx = speed;
+    if(up) speedz = -speed;
+    if(down) speedz = speed;
 
-    gl_check(glBindBuffer(GL_ARRAY_BUFFER, tbuffer));
-    gl_check(glEnableVertexAttribArray(GLPARAM_TEXCOORD0));
-    gl_check(glVertexAttribPointer(GLPARAM_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 0, 0));
+    float x = camera.pos.x;
+    float y = camera.pos.y;
+    float z = camera.pos.z;
+    camera.pos = Vector(x + speedx * dt.seconds(), y,
+                        z + speedz * dt.seconds());
+    if(!fbo) {
+      // print fps every second
+      TimeLength dt_fps = now - flast;
+      if(dt_fps > TimeLength::inSeconds(1)) {
+        fprintf(stderr, "%f\n", fcount / dt_fps.seconds());
+        flast = now;
+        fcount = 0;
+      }
+    }
 
-    gl_check(glBindBuffer(GL_ARRAY_BUFFER, tanbuffer));
-    gl_check(glEnableVertexAttribArray(GLPARAM_TANGENT0));
-    gl_check(glVertexAttribPointer(GLPARAM_TANGENT0, 3, GL_FLOAT, GL_FALSE, 0, 0));
+    if(fbo) fbo->bind();
 
-    // textures
-    colors->bind(0);
-    gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX0), 0));
+    render_frame(dt);
 
-    specular->bind(1);
-    gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX1), 1));
+    if(fbo) {
+      fbo->unbind();
 
-    night_lights->bind(2);
-    gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX2), 2));
+      if(strcmp(output_prefix, "-") == 0) {
+        fbo->to_ppm_file(stdout);
+      } else {
+        char fname[256];
+        snprintf(fname, sizeof(fname), "%s_%06d.ppm", output_prefix, frame);
+        fbo->to_ppm(fname);
+      }
 
-    normal_map->bind(3);
-    gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX3), 3));
-
-    gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_MVP), 1, GL_FALSE, m.data));
-    gl_check(glDrawArrays(GL_TRIANGLES, 0, points.size()));
-
-
-    gl_check(glDisableVertexAttribArray(GLPARAM_VERTEX));
-    gl_check(glDisableVertexAttribArray(GLPARAM_NORMAL0));
-    gl_check(glDisableVertexAttribArray(GLPARAM_TEXCOORD0));
-    gl_check(glDisableVertexAttribArray(GLPARAM_TANGENT0));
-
-
-    // render the skybox
-    skybox->use();
-
-    gl_check(glBindBuffer(GL_ARRAY_BUFFER, qverts));
-    gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
-    gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
-
-    // hack... slow down the stars
-    m = Matrix::rotation(angle*0.2, Vector(0,1,0)) * pole_up;
-
-    stars->bind(0);
-    gl_check(glUniform1i(skybox->requireUniform(UNIFORM_TEX0), 0));
-    gl_check(glUniformMatrix4fv(skybox->requireUniform(UNIFORM_MVP), 1, GL_FALSE, m.data));
-    gl_check(glDrawArrays(GL_TRIANGLES, 0, 6));
-
-    SDL_GL_SwapBuffers();
+      frame++;
+      if(frame == output_frames) break;
+    }
   }
+
+  if(fbo) delete fbo;
 
   return 0;
 }

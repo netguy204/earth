@@ -49,13 +49,71 @@ public:
     return result;
   }
 
-  void set_scale(float x, float y, float z) {
+  inline Matrix invertspecial() {
+    Matrix result;
+
+    // rotation component is the transpose
+    result.elm(0,0) = elm(0,0);
+    result.elm(0,1) = elm(1,0);
+    result.elm(0,2) = elm(2,0);
+
+    result.elm(1,0) = elm(0,1);
+    result.elm(1,1) = elm(1,1);
+    result.elm(1,2) = elm(2,1);
+
+    result.elm(2,0) = elm(0,2);
+    result.elm(2,1) = elm(1,2);
+    result.elm(2,2) = elm(2,2);
+
+    // translation component is displacement negated and rotated
+    result.elm(0,3) = -(elm(0,3) * result.elm(0,0) +
+                        elm(1,3) * result.elm(0,1) +
+                        elm(2,3) * result.elm(0,2));
+    result.elm(1,3) = -(elm(0,3) * result.elm(1,0) +
+                        elm(1,3) * result.elm(1,1) +
+                        elm(2,3) * result.elm(1,2));
+    result.elm(2,3) = -(elm(0,3) * result.elm(2,0) +
+                        elm(1,3) * result.elm(2,1) +
+                        elm(2,3) * result.elm(2,2));
+
+    // and the bottom row
+    result.elm(3,0) = 0;
+    result.elm(3,1) = 0;
+    result.elm(3,2) = 0;
+    result.elm(3,3) = 1;
+    return result;
+  }
+
+  inline void set_scale(float x, float y, float z) {
     elm(0,0) = x;
     elm(1,1) = y;
     elm(2,2) = z;
   }
 
-  void set_rotation(float angle, const Vector& v) {
+  inline void set_column(unsigned c, const Vector& v) {
+    elm(0,c) = v.x;
+    elm(1,c) = v.y;
+    elm(2,c) = v.z;
+  }
+
+  inline Vector operator*(const Vector& o) {
+    Vector result;
+    result.x = o.x * elm(0,0) + o.y * elm(0,1) + o.z * elm(0,2) + elm(0,3);
+    result.y = o.x * elm(1,0) + o.y * elm(1,1) + o.z * elm(1,2) + elm(1,3);
+    result.z = o.x * elm(2,0) + o.y * elm(2,1) + o.z * elm(2,2) + elm(2,3);
+    return result;
+  }
+
+  inline Vector4 operator*(const Vector4& o) {
+    Vector4 result;
+    result.x = o.x * elm(0,0) + o.y * elm(0,1) + o.z * elm(0,2) + o.w * elm(0,3);
+    result.y = o.x * elm(1,0) + o.y * elm(1,1) + o.z * elm(1,2) + o.w * elm(1,3);
+    result.z = o.x * elm(2,0) + o.y * elm(2,1) + o.z * elm(2,2) + o.w * elm(2,3);
+    result.w = o.x * elm(3,0) + o.y * elm(3,1) + o.z * elm(3,2) + o.w * elm(3,3);
+    return result;
+  }
+
+  inline void set_rotation(float angle, const Vector& v) {
     Vector n = v.norm();
     float s = float(sin(angle));
     float c = float(cos(angle));
@@ -85,6 +143,18 @@ public:
     elm(2,1) = (one_c * yz) + xs;
     elm(2,2) = (one_c * zz) + c;
   }
+
+  inline void print() {
+    printf("%02.3f  %02.3f  %02.3f  %02.3f\n"
+           "%02.3f  %02.3f  %02.3f  %02.3f\n"
+           "%02.3f  %02.3f  %02.3f  %02.3f\n"
+           "%02.3f  %02.3f  %02.3f  %02.3f\n",
+           elm(0,0), elm(0,1), elm(0,2), elm(0,3),
+           elm(1,0), elm(1,1), elm(1,2), elm(1,3),
+           elm(2,0), elm(2,1), elm(2,2), elm(2,3),
+           elm(3,0), elm(3,1), elm(3,2), elm(3,3));
+  }
+
 };
 
 #endif

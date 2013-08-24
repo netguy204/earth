@@ -5,6 +5,7 @@
 #include "utils.h"
 
 #include <stdlib.h>
+#include <algorithm>
 
 class Image {
 public:
@@ -13,7 +14,8 @@ public:
   int ch;
   unsigned char* data;
 
-  inline Image(unsigned w, unsigned h, unsigned ch) {
+  inline Image(unsigned w, unsigned h, unsigned ch)
+    : w(w), h(h), ch(ch) {
     size_t sz = w * h * ch;
     if(sz > 0) {
       data = (unsigned char*)malloc(sz);
@@ -33,6 +35,24 @@ public:
     return im;
   }
 
+  inline void to_ppm_file(FILE* f) {
+    fprintf(f, "P6\n");
+    fprintf(f, "%d %d 255\n", w, h);
+
+    if(ch != 3) fail_exit("cannot write a texture that doesn't have 3 channels");
+
+    for(int ii = (h-1); ii >= 0; --ii) {
+      fwrite(data + (ii * w * ch), (w * ch), 1, f);
+    }
+  }
+
+  inline void to_ppm(const char* fname) {
+    FILE* f = fopen(fname, "w");
+    if(!f) fail_exit("couldn't write to %s\n", fname);
+    to_ppm_file(f);
+    fclose(f);
+  }
+
   inline unsigned char elm(unsigned x, unsigned y, unsigned c) const {
     return data[y * (w*ch) + (x*ch) + c];
   }
@@ -45,21 +65,22 @@ public:
 class Texture {
 public:
   GLuint texture;
+  unsigned w, h;
   bool bound;
   unsigned tunit;
 
-  inline Texture(unsigned w, unsigned h, GLuint type, unsigned char* data)
-    : bound(false), tunit(0) {
+  inline Texture(unsigned w, unsigned h, GLuint dst_type, GLuint type, unsigned char* data)
+    : w(w), h(h), bound(false), tunit(0) {
 
     glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    bind(0);
     gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
     gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
     gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
     gl_check(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-    gl_check(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+    gl_check(glTexImage2D(GL_TEXTURE_2D, 0, dst_type, w, h, 0,
                           type, GL_UNSIGNED_BYTE, data));
-    glBindTexture(GL_TEXTURE_2D, 0);
+    unbind();
   }
 
   inline ~Texture() {
@@ -83,7 +104,7 @@ public:
       fail_exit("don't know how to handle an image with %d channels", im->ch);
     }
 
-    return new Texture(im->w, im->h, kind, im->data);
+    return new Texture(im->w, im->h, kind, kind, im->data);
   }
 
   inline void bind(unsigned unit) {
@@ -97,6 +118,68 @@ public:
     glActiveTexture(GL_TEXTURE0 + tunit);
     glBindTexture(GL_TEXTURE_2D, 0);
     bound = false;
+  }
+
+  inline Image* to_image() {
+    Image* im = new Image(w, h, 3);
+    bind(0);
+    gl_check(glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, im->data));
+    unbind();
+    return im;
+  }
+};
+
+class FBO {
+public:
+  Texture* texture;
+
+  GLuint depth;
+  GLuint fbo;
+
+  inline FBO(unsigned w, unsigned h, GLuint type)
+    : texture(new Texture(w, h, GL_RGB, type, NULL)) {
+
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    glGenRenderbuffers(1, &depth);
+    glBindRenderbuffer(GL_RENDERBUFFER, depth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT32, w, h);
+
+    gl_check(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                                    texture->texture, 0));
+    gl_check(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                       GL_RENDERBUFFER, depth));
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+      fail_exit("framebuffer is incomplete");
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  }
+
+  ~FBO() {
+    glDeleteFramebuffers(1, &fbo);
+    delete texture;
+  }
+
+  inline void bind() {
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  }
+
+  inline void unbind() {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  }
+
+  inline void to_ppm(const char* fname) {
+    Image* im = texture->to_image();
+    im->to_ppm(fname);
+    delete im;
+  }
+
+  inline void to_ppm_file(FILE* f) {
+    Image* im = texture->to_image();
+    im->to_ppm_file(f);
+    delete im;
   }
 };
 
