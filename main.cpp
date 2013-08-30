@@ -36,7 +36,6 @@ Program* ads_program_loader() {
                         UNIFORM_TEX3, "normal_map",
                         UNIFORM_MV, "mv",
                         UNIFORM_PERSPECTIVE, "perspective",
-                        UNIFORM_EYE, "eye",
                         UNIFORM_DONE);
 
   return program;
@@ -66,7 +65,6 @@ Program* simple_program_loader() {
   program_bind_uniforms(program,
                         UNIFORM_MV, "mv",
                         UNIFORM_PERSPECTIVE, "perspective",
-                        UNIFORM_EYE, "eye",
                         UNIFORM_TEX0, "colors",
                         UNIFORM_DONE);
   return program;
@@ -87,7 +85,7 @@ CubeMap* stars;
 float angle;
 unsigned points_size;
 Camera camera(d2r(20), float(screen_width) / float(screen_height),
-              -1.0, -1000.0);
+              0.1, 1000.0);
 Matrix perspective(camera.getPerspectiveTransform());
 
 void render_frame(const TimeLength& dt) {
@@ -133,7 +131,6 @@ void render_frame(const TimeLength& dt) {
 
   gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_MV), 1, GL_FALSE, m.data));
   gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_PERSPECTIVE), 1, GL_FALSE, perspective.data));
-  gl_check(glUniform3fv(ads->requireUniform(UNIFORM_EYE), 1, (float*)&camera.pos));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, points_size));
 
 
@@ -194,6 +191,7 @@ int main(int argc, char** argv) {
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_BLEND);
   glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LESS);
 
   glClearColor(0,0,0,0);
   glViewport(0, 0, screen_width, screen_height);
@@ -343,10 +341,12 @@ int main(int argc, char** argv) {
   c.print();
   printf("\n");
 
-  (perspective * c * Vector4(0, 0, -1, 1)).point().print();
-  (perspective * c * Vector4(0, 0, 0, 1)).point().print();
-  (perspective * c * Vector4(0, 0, 1, 1)).point().print();
-  (perspective * c * Vector4(1, 1, 1, 1)).point().print();
+  for(int z = -15; z < 15; ++z) {
+    printf("%d: ", z);
+    (c * Vector4(0, 0, z, 1)).point().print();
+    printf("%d: ", z);
+    (perspective * c * Vector4(0, 0, z, 1)).point().print();
+  }
 
 
   bool left = false;

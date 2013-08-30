@@ -31,12 +31,13 @@ void main() {
 
   // sort of like the amount of light that is directly reflecting into
   // the eye
-  vec3 reflection = reflect(lightDir, normal);
+  vec3 reflection = reflect(-lightDir, normal);
   float eyeReflectionAngle = dot(reflection, eyeDir);
 
   float specCoeff = texture2D(specular, tcoord).a;
   float spec = max(0, specular_intensity * pow(eyeReflectionAngle, shininess * specCoeff)) * length(color);
 
   gl_FragColor = color + spec_color * spec;
+  //gl_FragColor = vec4(diffuseCoeff, diffuseCoeff, diffuseCoeff, 1);
   //gl_FragColor = vec4(eyeReflectionAngle, eyeReflectionAngle, eyeReflectionAngle, 1);
 }
