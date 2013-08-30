@@ -4,11 +4,20 @@
 #include "point.h"
 #include <string.h>
 
+class Matrix;
+
+static float DetIJ(const Matrix& m, const int i, const int j);
+void m3dInvertMatrix44(Matrix& mInverse, const Matrix& m);
+
 class Matrix {
 public:
   float data[16];
 
   inline Matrix() {
+    set_identity();
+  }
+
+  inline void set_identity() {
     const float ident[16] = {1, 0, 0, 0,
                        0, 1, 0, 0,
                        0, 0, 1, 0,
@@ -84,6 +93,12 @@ public:
     return result;
   }
 
+  inline Matrix invert() {
+    Matrix result;
+    m3dInvertMatrix44(result, *this);
+    return result;
+  }
+
   inline void set_scale(float x, float y, float z) {
     elm(0,0) = x;
     elm(1,1) = y;
@@ -156,5 +171,55 @@ public:
   }
 
 };
+
+////////////////////////////////////////////////////////////////////////////
+/// This function is not exported by library, just for this modules use only
+// 3x3 determinant
+static float DetIJ(const Matrix& m, const int i, const int j) {
+  int x, y, ii, jj;
+  float ret, mat[3][3];
+
+  x = 0;
+  for (ii = 0; ii < 4; ii++) {
+    if (ii == i) continue;
+    y = 0;
+    for (jj = 0; jj < 4; jj++) {
+      if (jj == j) continue;
+      mat[x][y] = m.data[(ii*4)+jj];
+      y++;
+    }
+    x++;
+  }
+
+  ret =  mat[0][0]*(mat[1][1]*mat[2][2]-mat[2][1]*mat[1][2]);
+  ret -= mat[0][1]*(mat[1][0]*mat[2][2]-mat[2][0]*mat[1][2]);
+  ret += mat[0][2]*(mat[1][0]*mat[2][1]-mat[2][0]*mat[1][1]);
+
+  return ret;
+}
+
+////////////////////////////////////////////////////////////////////////////
+///
+// Invert matrix
+void m3dInvertMatrix44(Matrix& mInverse, const Matrix& m) {
+  int i, j;
+  float det, detij;
+
+  // calculate 4x4 determinant
+  det = 0.0f;
+  for (i = 0; i < 4; i++) {
+    det += (i & 0x1) ? (-m.data[i] * DetIJ(m, 0, i)) : (m.data[i] * DetIJ(m, 0,i));
+  }
+  det = 1.0f / det;
+
+  // calculate inverse
+  for (i = 0; i < 4; i++) {
+    for (j = 0; j < 4; j++) {
+      detij = DetIJ(m, j, i);
+      mInverse.data[(i*4)+j] = ((i+j) & 0x1) ? (-detij * det) : (detij *det);
+    }
+  }
+}
+
 
 #endif

@@ -18,7 +18,7 @@
 
 const char* libbase = ".";
 unsigned screen_width = 1200;
-unsigned screen_height = 1200;
+unsigned screen_height = 720;
 
 Program* ads_program_loader() {
   Program *program = Program::create("ads.vert",
@@ -34,7 +34,7 @@ Program* ads_program_loader() {
                         UNIFORM_TEX1, "specular",
                         UNIFORM_TEX2, "night_lights",
                         UNIFORM_TEX3, "normal_map",
-                        UNIFORM_MVP, "mvp",
+                        UNIFORM_MV, "mv",
                         UNIFORM_PERSPECTIVE, "perspective",
                         UNIFORM_EYE, "eye",
                         UNIFORM_DONE);
@@ -50,14 +50,33 @@ Program* skybox_program_loader() {
 
   program_bind_uniforms(program,
                         UNIFORM_TEX0, "colors",
-                        UNIFORM_MVP, "mvp",
+                        UNIFORM_MV, "mv",
                         UNIFORM_DONE);
   return program;
 }
 
+Program* simple_program_loader() {
+  Program* program = Program::create("simple.vert",
+                                     "simple.frag",
+                                     GLPARAM_VERTEX, "vertex",
+                                     GLPARAM_TEXCOORD0, "tcoord0",
+                                     GLPARAM_NORMAL0, "normal",
+                                     GLPARAM_DONE);
+
+  program_bind_uniforms(program,
+                        UNIFORM_MV, "mv",
+                        UNIFORM_PERSPECTIVE, "perspective",
+                        UNIFORM_EYE, "eye",
+                        UNIFORM_TEX0, "colors",
+                        UNIFORM_DONE);
+  return program;
+}
+
+
 GLuint vbuffer, tbuffer, nbuffer, tanbuffer, qverts;
 Program *ads;
 Program *skybox;
+Program *simple;
 
 Texture* colors;
 Texture* specular;
@@ -67,14 +86,14 @@ CubeMap* stars;
 
 float angle;
 unsigned points_size;
-Camera camera(d2r(35), float(screen_width) / float(screen_height),
-              1.0, 1000.0);
+Camera camera(d2r(20), float(screen_width) / float(screen_height),
+              -1.0, -1000.0);
 Matrix perspective(camera.getPerspectiveTransform());
 
 void render_frame(const TimeLength& dt) {
   Matrix pole_up = Matrix::rotation(M_PI/2, Vector(1,0,0));
   Matrix o2w = Matrix::rotation(angle, Vector(0,1,0)) * pole_up;
-  Matrix m = camera.getCameraToWorld().invertspecial() * o2w;
+  Matrix m = camera.getCameraToWorld().invert() * o2w;
 
   angle += dt.seconds() * (2 * M_PI * 0.05); // 1/20 rev per second
 
@@ -112,7 +131,7 @@ void render_frame(const TimeLength& dt) {
   normal_map->bind(3);
   gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX3), 3));
 
-  gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_MVP), 1, GL_FALSE, m.data));
+  gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_MV), 1, GL_FALSE, m.data));
   gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_PERSPECTIVE), 1, GL_FALSE, perspective.data));
   gl_check(glUniform3fv(ads->requireUniform(UNIFORM_EYE), 1, (float*)&camera.pos));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, points_size));
@@ -136,7 +155,7 @@ void render_frame(const TimeLength& dt) {
 
   stars->bind(0);
   gl_check(glUniform1i(skybox->requireUniform(UNIFORM_TEX0), 0));
-  gl_check(glUniformMatrix4fv(skybox->requireUniform(UNIFORM_MVP), 1, GL_FALSE, m.data));
+  gl_check(glUniformMatrix4fv(skybox->requireUniform(UNIFORM_MV), 1, GL_FALSE, m.data));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, 6));
 
   SDL_GL_SwapBuffers();
@@ -168,6 +187,7 @@ int main(int argc, char** argv) {
 
   ads = get_program(ads_program_loader);
   skybox = get_program(skybox_program_loader);
+  simple = get_program(simple_program_loader);
 
   SDL_WM_SetCaption("Chuckle", NULL);
 
@@ -310,26 +330,24 @@ int main(int argc, char** argv) {
     fbo = new FBO(screen_width, screen_height, GL_RGBA);
   }
 
+  //perspective.set_identity();
+
   unsigned frame = 0;
-  camera.pos = Vector(0, 0, -10);
+  camera.pos = Vector(0, 0, 10);
   camera.look = Vector(0, 0, -1);
   camera.up = Vector(0, 1, 0);
   perspective.print();
   printf("\n");
 
-  Matrix c(camera.getCameraToWorld().invertspecial());
+  Matrix c(camera.getCameraToWorld().invert());
   c.print();
   printf("\n");
 
-  (perspective * c * Vector4(0, 0, -4, 1)).print();
-  (perspective * c * Vector4(0, 0, -3, 1)).print();
-  (perspective * c * Vector4(0, 0, -2, 1)).print();
-  (perspective * c * Vector4(0, 0, -1, 1)).print();
-  (perspective * c * Vector4(0, 0, 0, 1)).print();
-  (perspective * c * Vector4(0, 0, 1, 1)).print();
-  (perspective * c * Vector4(0, 0, 2, 1)).print();
-  (perspective * c * Vector4(0, 0, 3, 1)).print();
-  (perspective * c * Vector4(0, 0, 4, 1)).print();
+  (perspective * c * Vector4(0, 0, -1, 1)).point().print();
+  (perspective * c * Vector4(0, 0, 0, 1)).point().print();
+  (perspective * c * Vector4(0, 0, 1, 1)).point().print();
+  (perspective * c * Vector4(1, 1, 1, 1)).point().print();
+
 
   bool left = false;
   bool right = false;
@@ -383,14 +401,18 @@ int main(int argc, char** argv) {
     float speedz = 0;
     if(left) speedx = -speed;
     if(right) speedx = speed;
-    if(up) speedz = -speed;
-    if(down) speedz = speed;
+    if(up) speedz = speed;
+    if(down) speedz = -speed;
 
     float x = camera.pos.x;
     float y = camera.pos.y;
     float z = camera.pos.z;
     camera.pos = Vector(x + speedx * dt.seconds(), y,
                         z + speedz * dt.seconds());
+
+    // keep the camera looking at world center
+    //camera.look = (camera.pos).norm();
+
     if(!fbo) {
       // print fps every second
       TimeLength dt_fps = now - flast;

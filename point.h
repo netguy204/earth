@@ -52,6 +52,10 @@ public:
     return Point(-x, -y, -z);
   }
 
+  inline Point operator/(float s) const {
+    return Point(x/s, y/s, z/s);
+  }
+
   inline void print() const {
     printf("%02.3f  %02.3f  %02.3f\n", x, y, z);
   }
@@ -86,6 +90,10 @@ public:
 
   inline void print() const {
     printf("%02.3f  %02.3f  %02.3f  %02.3f\n", x, y, z, w);
+  }
+
+  inline Vector point() const {
+    return Vector(x, y, z) / w;
   }
 };
 
