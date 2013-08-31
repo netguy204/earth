@@ -84,12 +84,12 @@ CubeMap* stars;
 
 float angle;
 unsigned points_size;
-Camera camera(d2r(20), float(screen_width) / float(screen_height),
+Camera camera(d2r(60), float(screen_width) / float(screen_height),
               0.1, 1000.0);
 Matrix perspective(camera.getPerspectiveTransform());
 
 void render_frame(const TimeLength& dt) {
-  Matrix pole_up = Matrix::rotation(M_PI/2, Vector(1,0,0));
+  Matrix pole_up = Matrix::rotation(-M_PI/2, Vector(1,0,0));
   Matrix o2w = Matrix::rotation(angle, Vector(0,1,0)) * pole_up;
   Matrix m = camera.getCameraToWorld().invert() * o2w;
 
@@ -192,6 +192,7 @@ int main(int argc, char** argv) {
   glEnable(GL_BLEND);
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
+  glEnable(GL_CULL_FACE);
 
   glClearColor(0,0,0,0);
   glViewport(0, 0, screen_width, screen_height);
@@ -217,24 +218,30 @@ int main(int argc, char** argv) {
 
   for(unsigned ilat = 0; ilat < lats; ++ilat) {
     float hlat = -M_PI/2 + lat_step * ilat;
-    float nlat = -M_PI/2 + lat_step * (ilat + 1);
+    float nlat = hlat + lat_step;
 
-    float rhlat = (float)ilat / lats;
-    float rnlat = (float)(ilat+1) / lats;
+    float rhlat = 1.0f - float(ilat) / float(lats);
+    float rnlat = 1.0f - float(ilat+1) / float(lats);
 
     for(unsigned ilon = 0; ilon < lons; ++ilon) {
       // generate a quad "here" to "next"
-      float hlon = lon_step * ilon;
-      float nlon = lon_step * (ilon + 1);
+      float hlon = -M_PI + lon_step * ilon;
+      float nlon = hlon + lon_step;
 
-      float rhlon = (float)ilon / lons;
-      float rnlon  = (float)(ilon+1) / lons;
+      float rhlon = float(ilon) / float(lons);
+      float rnlon  = float(ilon+1) / float(lons);
 
       points.push_back(Point::fromLatLon(hlat, hlon, alt));
       tcoords.push_back(TexCoord(rhlon, rhlat));
       Vector n1 = Point::fromLatLon(hlat, hlon, alt).norm();
       normals.push_back(n1);
       tangents.push_back(axis.cross(n1));
+
+      points.push_back(Point::fromLatLon(nlat, nlon, alt));
+      tcoords.push_back(TexCoord(rnlon, rnlat));
+      Vector n3 = Point::fromLatLon(nlat, nlon, alt).norm();
+      normals.push_back(n3);
+      tangents.push_back(axis.cross(n3));
 
       points.push_back(Point::fromLatLon(nlat, hlon, alt));
       tcoords.push_back(TexCoord(rhlon, rnlat));
@@ -244,28 +251,21 @@ int main(int argc, char** argv) {
 
       points.push_back(Point::fromLatLon(nlat, nlon, alt));
       tcoords.push_back(TexCoord(rnlon, rnlat));
-      Vector n3 = Point::fromLatLon(nlat, nlon, alt).norm();
-      normals.push_back(n3);
-      tangents.push_back(axis.cross(n3));
-
-
-      points.push_back(Point::fromLatLon(nlat, nlon, alt));
-      tcoords.push_back(TexCoord(rnlon, rnlat));
       Vector n4 = Point::fromLatLon(nlat, nlon, alt).norm();
       normals.push_back(n4);
       tangents.push_back(axis.cross(n4));
-
-      points.push_back(Point::fromLatLon(hlat, nlon, alt));
-      tcoords.push_back(TexCoord(rnlon, rhlat));
-      Vector n5 = Point::fromLatLon(hlat, nlon, alt).norm();
-      normals.push_back(n5);
-      tangents.push_back(axis.cross(n5));
 
       points.push_back(Point::fromLatLon(hlat, hlon, alt));
       tcoords.push_back(TexCoord(rhlon, rhlat));
       Vector n6 = Point::fromLatLon(hlat, hlon, alt).norm();
       normals.push_back(n6);
       tangents.push_back(axis.cross(n6));
+
+      points.push_back(Point::fromLatLon(hlat, nlon, alt));
+      tcoords.push_back(TexCoord(rnlon, rhlat));
+      Vector n5 = Point::fromLatLon(hlat, nlon, alt).norm();
+      normals.push_back(n5);
+      tangents.push_back(axis.cross(n5));
     }
   }
 
@@ -304,12 +304,12 @@ int main(int argc, char** argv) {
   // build a full screen quad
   float qpoints[] = {
     -1, -1, 0.99,
-    -1, 1, 0.99,
     1, 1, 0.99,
+    -1, 1, 0.99,
 
     1, 1, 0.99,
-    1, -1, 0.99,
-    -1, -1, 0.99
+    -1, -1, 0.99,
+    1, -1, 0.99
   };
 
   glGenBuffers(1, &qverts);
@@ -331,7 +331,7 @@ int main(int argc, char** argv) {
   //perspective.set_identity();
 
   unsigned frame = 0;
-  camera.pos = Vector(0, 0, 10);
+  camera.pos = Vector(0, 0, 1.4);
   camera.look = Vector(0, 0, -1);
   camera.up = Vector(0, 1, 0);
   perspective.print();
@@ -341,11 +341,11 @@ int main(int argc, char** argv) {
   c.print();
   printf("\n");
 
-  for(int z = -15; z < 15; ++z) {
+  for(int z = -15; z < 25; ++z) {
     printf("%d: ", z);
-    (c * Vector4(0, 0, z, 1)).point().print();
+    (c * Vector4(1, 1, z, 1)).point().print();
     printf("%d: ", z);
-    (perspective * c * Vector4(0, 0, z, 1)).point().print();
+    (perspective * c * Vector4(1, 1, z, 1)).point().print();
   }
 
 

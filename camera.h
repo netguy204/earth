@@ -39,20 +39,13 @@ public:
 
   inline Matrix getPerspectiveTransform() {
     Matrix result;
+    float f = 1.0f / tan(fov/2);
 
-    float yMax = zmin * tanf(fov * 0.5f);
-    float yMin = -yMax;
-    float xMin = yMin * aspect;
-    float xMax = -xMin;
-
-    result.data[0] = (2.0f * zmin) / (xMax - xMin);
-    result.data[5] = (2.0f * zmin) / (yMax - yMin);
-    result.data[8] = (xMax + xMin) / (xMax - xMin);
-    result.data[9] = (yMax + yMin) / (yMax - yMin);
-    result.data[10] = -((zmax + zmin) / (zmax - zmin));
-    result.data[11] = -1.0f;
-    result.data[14] = -((2.0f * (zmax*zmin))/(zmax - zmin));
-    result.data[15] = 0.0f;
+    result.elm(0, 0) = f / aspect;
+    result.elm(1, 1) = f;
+    result.elm(2, 2) = (zmax + zmin) / (zmin - zmax);
+    result.elm(2, 3) = 2 * zmax * zmin / (zmin - zmax);
+    result.elm(3, 2) = -1;
 
     return result;
   }
