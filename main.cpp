@@ -91,7 +91,7 @@ Matrix perspective(camera.getPerspectiveTransform());
 void render_frame(const TimeLength& dt) {
   Matrix pole_up = Matrix::rotation(-M_PI/2, Vector(1,0,0));
   Matrix o2w = Matrix::rotation(angle, Vector(0,1,0)) * pole_up;
-  Matrix m = camera.getCameraToWorld().invert() * o2w;
+  Matrix m = camera.getCameraToWorld().invertspecial() * o2w;
 
   angle += dt.seconds() * (2 * M_PI * 0.05); // 1/20 rev per second
 
@@ -337,7 +337,7 @@ int main(int argc, char** argv) {
   perspective.print();
   printf("\n");
 
-  Matrix c(camera.getCameraToWorld().invert());
+  Matrix c(camera.getCameraToWorld().invertspecial());
   c.print();
   printf("\n");
 

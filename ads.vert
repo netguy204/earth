@@ -11,14 +11,16 @@ varying vec3 eyeDir;
 varying vec3 lightDir;
 
 void main() {
+  mat3 mv3 = mat3(mv);
+
   tcoord = tcoord0;
   vec4 tfvert = mv * vec4(vertex, 1);
 
-  vec3 normal = mat3(mv) * normal;
+  vec3 normal = mv3 * normal;
   vec3 vertex = vec3(tfvert);
 
   // build the transform from view space to tangent space
-  vec3 tangent = mat3(mv) * tangent;
+  vec3 tangent = mv3 * tangent;
   vec3 bitangent = cross(normal, tangent);
   mat3 e2t = transpose(mat3(tangent, bitangent, normal));
 
@@ -30,5 +32,5 @@ void main() {
   lightDir = e2t * normalize(light - vertex);
 
   vec4 pvert = perspective * tfvert;
-  gl_Position = pvert / pvert.w;
+  gl_Position = pvert;
 }

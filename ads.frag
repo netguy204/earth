@@ -38,6 +38,4 @@ void main() {
   float spec = max(0, specular_intensity * pow(eyeReflectionAngle, shininess * specCoeff)) * length(color);
 
   gl_FragColor = color + spec_color * spec;
-  //gl_FragColor = vec4(diffuseCoeff, diffuseCoeff, diffuseCoeff, 1);
-  //gl_FragColor = vec4(eyeReflectionAngle, eyeReflectionAngle, eyeReflectionAngle, 1);
 }
