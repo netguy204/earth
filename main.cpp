@@ -17,8 +17,8 @@
 #include <vector>
 
 const char* libbase = ".";
-unsigned screen_width = 1200;
-unsigned screen_height = 720;
+unsigned screen_width = 1280;
+unsigned screen_height = 800;
 
 Program* ads_program_loader() {
   Program *program = Program::create("ads.vert",
@@ -193,6 +193,8 @@ int main(int argc, char** argv) {
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
   glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
+  glFrontFace(GL_CCW);
 
   glClearColor(0,0,0,0);
   glViewport(0, 0, screen_width, screen_height);
@@ -334,6 +336,7 @@ int main(int argc, char** argv) {
   camera.pos = Vector(0, 0, 1.4);
   camera.look = Vector(0, 0, -1);
   camera.up = Vector(0, 1, 0);
+  /*
   perspective.print();
   printf("\n");
 
@@ -347,7 +350,7 @@ int main(int argc, char** argv) {
     printf("%d: ", z);
     (perspective * c * Vector4(1, 1, z, 1)).point().print();
   }
-
+  */
 
   bool left = false;
   bool right = false;
