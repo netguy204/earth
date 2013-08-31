@@ -1,8 +1,7 @@
 uniform sampler2D colors;
 uniform sampler2D topo;
-uniform sampler2D specular;
+uniform sampler2D norm_spec;
 uniform sampler2D night_lights;
-uniform sampler2D normal_map;
 
 varying vec2 tcoord;
 varying vec3 eyeDir;
@@ -11,7 +10,7 @@ varying vec3 lightDir;
 void main() {
   // lightDir and eyeDir are already in tangent space so we can just
   // read our normal
-  vec3 normal = normalize(texture2D(normal_map, tcoord).rgb * 2.0 - 1.0);
+  vec3 normal = normalize(texture2D(norm_spec, tcoord).rgb * 2.0 - 1.0);
   vec3 lightDir = normalize(lightDir);
   vec3 eyeDir = normalize(eyeDir);
 
@@ -34,7 +33,7 @@ void main() {
   vec3 reflection = reflect(-lightDir, normal);
   float eyeReflectionAngle = dot(reflection, eyeDir);
 
-  float specCoeff = texture2D(specular, tcoord).a;
+  float specCoeff = texture2D(norm_spec, tcoord).a;
   float spec = max(0, specular_intensity * pow(eyeReflectionAngle, shininess * specCoeff)) * length(color);
 
   gl_FragColor = color + spec_color * spec;

@@ -31,9 +31,8 @@ Program* ads_program_loader() {
 
   program_bind_uniforms(program,
                         UNIFORM_TEX0, "colors",
-                        UNIFORM_TEX1, "specular",
+                        UNIFORM_TEX1, "norm_spec",
                         UNIFORM_TEX2, "night_lights",
-                        UNIFORM_TEX3, "normal_map",
                         UNIFORM_MV, "mv",
                         UNIFORM_PERSPECTIVE, "perspective",
                         UNIFORM_DONE);
@@ -77,9 +76,8 @@ Program *skybox;
 Program *simple;
 
 Texture* colors;
-Texture* specular;
+Texture* norm_spec;
 Texture* night_lights;
-Texture* normal_map;
 CubeMap* stars;
 
 float angle;
@@ -120,14 +118,11 @@ void render_frame(const TimeLength& dt) {
   colors->bind(0);
   gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX0), 0));
 
-  specular->bind(1);
+  norm_spec->bind(1);
   gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX1), 1));
 
   night_lights->bind(2);
   gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX2), 2));
-
-  normal_map->bind(3);
-  gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX3), 3));
 
   gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_MV), 1, GL_FALSE, m.data));
   gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_PERSPECTIVE), 1, GL_FALSE, perspective.data));
@@ -293,9 +288,8 @@ int main(int argc, char** argv) {
   points_size = points.size();
 
   colors = Texture::from_file("world.png");
-  specular = Texture::from_file("EarthSpec.png");
+  norm_spec = Texture::from_file("EarthNormSpec.png");
   night_lights = Texture::from_file("earth_lights.png");
-  normal_map = Texture::from_file("EarthNormal.png");
   stars = CubeMap::from_files("purplenebula_left.jpg",
                               "purplenebula_right.jpg",
                               "purplenebula_top.jpg",
