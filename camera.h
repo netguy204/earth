@@ -27,14 +27,44 @@ public:
       fov(fov), aspect(aspect), zmin(zmin), zmax(zmax) {
   }
 
+  inline Vector right() const {
+    return look.cross(up);
+  }
+
   inline Matrix getCameraToWorld() const {
-    Vector right = look.cross(up);
     Matrix result;
-    result.set_column(0, right);
+    result.set_column(0, right());
     result.set_column(1, up);
     result.set_column(2, -look);
-    result.set_column(3, pos);
-    return result;
+
+    return Matrix::translation(pos.x, pos.y, pos.z) * result;
+  }
+
+  inline void rotateZ(float angle) {
+    Matrix m;
+    m.set_rotation(angle, look);
+    up = m * up;
+  }
+
+  inline void rotateY(float angle) {
+    Matrix m;
+    m.set_rotation(angle, up);
+    look = m * look;
+  }
+
+  inline void rotateX(float angle) {
+    Matrix m;
+    m.set_rotation(angle, right());
+    look = m * look;
+    up = m * up;
+  }
+
+  inline void forceUp(const Vector& suggested_up) {
+    // renormalize our vectors in a way that removes roll and puts the
+    // up vector in the world up/look plane.
+    look = look.norm();
+    Vector right = look.cross(suggested_up);
+    up = right.cross(look);
   }
 
   inline Matrix getPerspectiveTransform() {

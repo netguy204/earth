@@ -52,6 +52,14 @@ public:
     return Point(-x, -y, -z);
   }
 
+  inline Point operator*(float s) const {
+    return Point(x*s, y*s, z*s);
+  }
+
+  inline Point operator+(const Point& o) const {
+    return Point(x+o.x, y+o.y, z+o.z);
+  }
+
   inline Point operator/(float s) const {
     return Point(x/s, y/s, z/s);
   }

@@ -37,6 +37,7 @@ typedef enum {
 } ProgramParameters;
 
 typedef enum {
+  UNIFORM_V,
   UNIFORM_MV,
   UNIFORM_MVP,
   UNIFORM_PERSPECTIVE,

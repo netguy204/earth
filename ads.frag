@@ -36,5 +36,8 @@ void main() {
   float specCoeff = texture2D(norm_spec, tcoord).a;
   float spec = max(0, specular_intensity * pow(eyeReflectionAngle, shininess * specCoeff)) * length(color);
 
+  // kill specular if normal is facing away from light
+  if(dot(lightDir, normal) < 0) spec = 0;
+
   gl_FragColor = color + spec_color * spec;
 }

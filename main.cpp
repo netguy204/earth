@@ -34,6 +34,7 @@ Program* ads_program_loader() {
                         UNIFORM_TEX1, "norm_spec",
                         UNIFORM_TEX2, "night_lights",
                         UNIFORM_MV, "mv",
+                        UNIFORM_LIGHT0_POSITION, "light",
                         UNIFORM_PERSPECTIVE, "perspective",
                         UNIFORM_DONE);
 
@@ -89,7 +90,9 @@ Matrix perspective(camera.getPerspectiveTransform());
 void render_frame(const TimeLength& dt) {
   Matrix pole_up = Matrix::rotation(-M_PI/2, Vector(1,0,0));
   Matrix o2w = Matrix::rotation(angle, Vector(0,1,0)) * pole_up;
-  Matrix m = camera.getCameraToWorld().invertspecial() * o2w;
+  Matrix c2w = camera.getCameraToWorld();
+  Matrix w2c = c2w.invertspecial();
+  Matrix m = w2c * o2w;
 
   angle += dt.seconds() * (2 * M_PI * 0.05); // 1/20 rev per second
 
@@ -124,6 +127,10 @@ void render_frame(const TimeLength& dt) {
   night_lights->bind(2);
   gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX2), 2));
 
+  // light
+  Point light = w2c * Point(100, 0, 100);
+  gl_check(glUniform3fv(ads->requireUniform(UNIFORM_LIGHT0_POSITION), 1, (float*)&light));
+
   gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_MV), 1, GL_FALSE, m.data));
   gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_PERSPECTIVE), 1, GL_FALSE, perspective.data));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, points_size));
@@ -143,11 +150,9 @@ void render_frame(const TimeLength& dt) {
   gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
 
   // hack... slow down the stars
-  m = Matrix::rotation(angle*0.2, Vector(0,1,0)) * pole_up;
-
   stars->bind(0);
   gl_check(glUniform1i(skybox->requireUniform(UNIFORM_TEX0), 0));
-  gl_check(glUniformMatrix4fv(skybox->requireUniform(UNIFORM_MV), 1, GL_FALSE, m.data));
+  gl_check(glUniformMatrix4fv(skybox->requireUniform(UNIFORM_MV), 1, GL_FALSE, c2w.data));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, 6));
 
   SDL_GL_SwapBuffers();
@@ -327,7 +332,7 @@ int main(int argc, char** argv) {
   //perspective.set_identity();
 
   unsigned frame = 0;
-  camera.pos = Vector(0, 0, 1.4);
+  camera.pos = Vector(0, 0, 10);
   camera.look = Vector(0, 0, -1);
   camera.up = Vector(0, 1, 0);
   /*
@@ -351,13 +356,23 @@ int main(int argc, char** argv) {
   bool up = false;
   bool down = false;
 
+  SDL_WM_GrabInput(SDL_GRAB_ON);
+  SDL_ShowCursor(SDL_DISABLE);
+
   while(true) {
     SDL_Event event;
+    float xrel = 0.0f;
+    float yrel = 0.0f;
+
     /* pump the events */
     while(SDL_PollEvent(&event)) {
       switch(event.type) {
       case SDL_QUIT:
         exit(0);
+        break;
+      case SDL_MOUSEMOTION:
+        xrel = event.motion.xrel;
+        yrel = event.motion.yrel;
         break;
       case SDL_KEYDOWN:
         switch(event.key.keysym.sym) {
@@ -393,7 +408,7 @@ int main(int argc, char** argv) {
     }
     last_frame = now;
 
-    float speed = 5.0;
+    float speed = 0.05;
     float speedx = 0;
     float speedz = 0;
     if(left) speedx = -speed;
@@ -401,11 +416,11 @@ int main(int argc, char** argv) {
     if(up) speedz = speed;
     if(down) speedz = -speed;
 
-    float x = camera.pos.x;
-    float y = camera.pos.y;
-    float z = camera.pos.z;
-    camera.pos = Vector(x + speedx * dt.seconds(), y,
-                        z + speedz * dt.seconds());
+    if(abs(yrel) > 0) camera.rotateX(yrel * dt.seconds());
+    if(abs(xrel) > 0) camera.rotateY(-xrel * dt.seconds());
+    camera.forceUp(Vector(0, 1, 0));
+
+    camera.pos = camera.pos + camera.look * speedz + camera.right() * speedx;
 
     // keep the camera looking at world center
     //camera.look = (camera.pos).norm();

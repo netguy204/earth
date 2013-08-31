@@ -37,6 +37,12 @@ public:
     return m;
   }
 
+  inline static Matrix translation(float x, float y, float z) {
+    Matrix m;
+    m.set_translation(x, y, z);
+    return m;
+  }
+
   inline float& elm(unsigned r, unsigned c) {
     return data[c*4+r];
   }
@@ -103,6 +109,12 @@ public:
     elm(0,0) = x;
     elm(1,1) = y;
     elm(2,2) = z;
+  }
+
+  inline void set_translation(float x, float y, float z) {
+    elm(0,3) = x;
+    elm(1,3) = y;
+    elm(2,3) = z;
   }
 
   inline void set_column(unsigned c, const Vector& v) {
