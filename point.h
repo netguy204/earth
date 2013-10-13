@@ -64,8 +64,8 @@ public:
     return Point(x/s, y/s, z/s);
   }
 
-  inline void print() const {
-    printf("%02.3f  %02.3f  %02.3f\n", x, y, z);
+  inline std::string str() const {
+    return stdstring("%02.3f  %02.3f  %02.3f", x, y, z);
   }
 };
 
@@ -96,8 +96,8 @@ public:
     : x(x), y(y), z(z), w(w) {
   }
 
-  inline void print() const {
-    printf("%02.3f  %02.3f  %02.3f  %02.3f\n", x, y, z, w);
+  inline std::string str() const {
+    return stdstring("%02.3f  %02.3f  %02.3f  %02.3f", x, y, z, w);
   }
 
   inline Vector point() const {

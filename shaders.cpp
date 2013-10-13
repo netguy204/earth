@@ -4,31 +4,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-void gl_check_(const char * msg) {
-  GLenum error = glGetError();
-  if(error == GL_NO_ERROR) return;
-
-  const char* e_msg;
-  switch(error) {
-  case GL_INVALID_ENUM:
-    e_msg = "GL_INVALID_ENUM";
-    break;
-  case GL_INVALID_VALUE:
-    e_msg = "GL_INVALID_VALUE";
-    break;
-  case GL_INVALID_OPERATION:
-    e_msg = "GL_INVALID_OPERATION";
-    break;
-  case GL_OUT_OF_MEMORY:
-    e_msg = "GL_OUT_OF_MEMORY";
-    break;
-  default:
-    e_msg = "unknown";
-  }
-
-  LOGW("GL_ERROR: %s => %s\n", msg, e_msg);
-}
-
 char* shader_buffer = NULL;
 
 int renderer_load_shader(const char* src, GLenum kind) {
@@ -67,7 +42,7 @@ int renderer_load_shader(const char* src, GLenum kind) {
 
 Program::Program() {
   program = -1;
-  for(int ii = 0; ii < UNIFORM_DONE; ++ii) {
+  for(int ii = 0; ii < UNIFORM_MAX; ++ii) {
     uniforms[ii] = -1;
   }
 }
@@ -103,19 +78,46 @@ Program* Program::create(const char* vertexname, const char* fragmentname, ...) 
   free(vertex_source);
   free(fragment_source);
 
+  // uniform bindings are deferred until the program is linked
+  const char* uniform_bindings[UNIFORM_MAX];
+  memset(uniform_bindings, 0, sizeof(uniform_bindings));
+
   int program = glCreateProgram();
+  Program* p = new Program();
+  p->program = program;
 
   gl_check(glAttachShader(program, vertex));
   gl_check(glAttachShader(program, fragment));
 
+  int mode = BINDING_INVALID;
+
   va_list ap;
   va_start(ap, fragmentname);
   while(1) {
-    ProgramParameters param = (ProgramParameters)va_arg(ap, int);
-    if(param == GLPARAM_DONE) break;
+    unsigned arg = va_arg(ap, int);
+    // are we done?
+    if(arg == BINDING_DONE) break;
 
-    const char* name = va_arg(ap, char*);
-    gl_check(glBindAttribLocation(program, param, name));
+    // if mode switch, do it now
+    if(arg == BINDING_ATTRIBUTES || arg == BINDING_UNIFORMS) {
+      mode = arg;
+      continue;
+    }
+
+    // if there is no mode then error
+    if(mode == BINDING_INVALID) {
+      fail_exit("mode not defined before first binding");
+    }
+
+    if(mode == BINDING_ATTRIBUTES) {
+      ProgramParameters param = (ProgramParameters)arg;
+      const char* name = va_arg(ap, char*);
+      gl_check(glBindAttribLocation(program, param, name));
+    } else if(mode == BINDING_UNIFORMS) {
+      ProgramUniforms uniform = (ProgramUniforms)arg;
+      const char* name = va_arg(ap, char*);
+      uniform_bindings[uniform] = name;
+    }
   }
 
   gl_check(glLinkProgram(program));
@@ -131,28 +133,53 @@ Program* Program::create(const char* vertexname, const char* fragmentname, ...) 
     fail_exit("glLinkProgram: %s\n", buffer);
   }
 
-  Program* p = new Program();
-  p->program = program;
-  return p;
-}
-
-void program_bind_uniforms(Program* p, ...) {
-  va_list ap;
-  va_start(ap, p);
-  while(1) {
-    ProgramUniforms uniform = (ProgramUniforms)va_arg(ap, int);
-    if(uniform == UNIFORM_DONE) break;
-
-    const char* name = va_arg(ap, char*);
-    GLint loc = glGetUniformLocation(p->program, name);
+  // now bind the uniforms
+  for(unsigned uniform = 0; uniform < UNIFORM_MAX; ++uniform) {
+    if(!uniform_bindings[uniform]) continue;
+    const char* name = uniform_bindings[uniform];
+    GLint loc = glGetUniformLocation(program, name);
     if(loc < 0) {
       fail_exit("glGetUniformLocation: %s error %d", name, loc);
     }
-
     p->uniforms[uniform] = loc;
   }
+
+  return p;
 }
 
+void Program::bind_attribute_buffer(ProgramParameters attr, unsigned element_length, GLuint buffer) {
+  gl_check(glBindBuffer(GL_ARRAY_BUFFER, buffer));
+  gl_check(glEnableVertexAttribArray(attr));
+  gl_check(glVertexAttribPointer(attr, element_length, GL_FLOAT, GL_FALSE, 0, 0));
+}
+
+void Program::bind_uniform(Texture* tex, unsigned slot, ProgramUniforms uni) {
+  tex->bind(slot);
+  gl_check(glUniform1i(requireUniform(uni), slot));
+}
+
+void Program::bind_uniform(Texture* tex, ProgramUniforms uni) {
+  unsigned slot = uni - UNIFORM_TEX0;
+  bind_uniform(tex, slot, uni);
+}
+
+void Program::bind_uniform(CubeMap* tex, unsigned slot, ProgramUniforms uni) {
+  tex->bind(slot);
+  gl_check(glUniform1i(requireUniform(uni), slot));
+}
+
+void Program::bind_uniform(CubeMap* tex, ProgramUniforms uni) {
+  unsigned slot = uni - UNIFORM_TEX0;
+  bind_uniform(tex, slot, uni);
+}
+
+void Program::bind_uniform(const Vector& v, ProgramUniforms uni) {
+  gl_check(glUniform3fv(requireUniform(uni), 1, (const float*)&v));
+}
+
+void Program::bind_uniform(const Matrix& m, ProgramUniforms uni) {
+  gl_check(glUniformMatrix4fv(requireUniform(uni), 1, GL_FALSE, m.data));
+}
 
 GLuint Program::current_program = 0;
 

@@ -2,38 +2,30 @@
 #define SHADERS_H
 
 #include "gl_headers.h"
+#include "image.h"
+#include "matrix.h"
 
 #include <map>
 
 
-// opengl error checking
-#define GL_CHECK_ERRORS
-
-void gl_check_(const char * msg);
-
-#define STRINGIZE(x) STRINGIZE2(x)
-#define STRINGIZE2(x) #x
-
-#ifdef GL_CHECK_ERRORS
-#define gl_check(command) command; gl_check_(__FILE__ ": " STRINGIZE(__LINE__) " " #command)
-#else
-#define gl_check(command) command
-#endif
-
+#define BINDING_ATTRIBUTES (int)-1
+#define BINDING_UNIFORMS (int)-2
+#define BINDING_DONE (int)-3
+#define BINDING_INVALID (int)-4
 
 typedef enum {
-  GLPARAM_VERTEX,
-  GLPARAM_OTHER0,
-  GLPARAM_NORMAL0,
-  GLPARAM_COLOR0,
-  GLPARAM_COLOR1,
-  GLPARAM_FOGCOORD0,
-  GLPARAM_OTHER1,
-  GLPARAM_TEXCOORD0,
-  GLPARAM_TEXCOORD1,
-  GLPARAM_TEXCOORD2,
-  GLPARAM_TANGENT0,
-  GLPARAM_DONE
+  ATTRIBUTE_VERTEX,
+  ATTRIBUTE_OTHER0,
+  ATTRIBUTE_NORMAL0,
+  ATTRIBUTE_COLOR0,
+  ATTRIBUTE_COLOR1,
+  ATTRIBUTE_FOGCOORD0,
+  ATTRIBUTE_OTHER1,
+  ATTRIBUTE_TEXCOORD0,
+  ATTRIBUTE_TEXCOORD1,
+  ATTRIBUTE_TEXCOORD2,
+  ATTRIBUTE_TANGENT0,
+  ATTRIBUTE_MAX
 } ProgramParameters;
 
 typedef enum {
@@ -54,7 +46,7 @@ typedef enum {
   UNIFORM_SCALE,
   UNIFORM_TEX_BL,
   UNIFORM_TEX_TR,
-  UNIFORM_DONE
+  UNIFORM_MAX
 } ProgramUniforms;
 
 class Program {
@@ -68,8 +60,16 @@ class Program {
   GLuint requireUniform(ProgramUniforms uniform);
 
   void use();
+  void bind_attribute_buffer(ProgramParameters attr, unsigned element_length, GLuint buffer);
 
-  GLuint uniforms[UNIFORM_DONE];
+  void bind_uniform(Texture* tex, unsigned slot, ProgramUniforms uni);
+  void bind_uniform(Texture* tex, ProgramUniforms uni);
+  void bind_uniform(CubeMap* tex, unsigned slot, ProgramUniforms uni);
+  void bind_uniform(CubeMap* tex, ProgramUniforms uni);
+  void bind_uniform(const Vector& v, ProgramUniforms uni);
+  void bind_uniform(const Matrix& m, ProgramUniforms uni);
+
+  GLuint uniforms[UNIFORM_MAX];
   GLuint program;
 
   static GLuint current_program;
@@ -77,10 +77,6 @@ class Program {
 
 typedef Program* (*ProgramLoader)(void);
 typedef std::map<ProgramLoader, Program*> LoaderToProgram;
-
-Program* renderer_link_shader(const char* vertexname, const char* fragmentname, ...);
-
-void program_bind_uniforms(Program* p, ...);
 
 Program* get_program(ProgramLoader loader);
 

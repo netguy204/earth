@@ -20,6 +20,18 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+std::string stdstring(const char* msg, ...) {
+  char buffer[256];
+
+  va_list args;
+  va_start(args, msg);
+  vsnprintf(buffer, sizeof(buffer), msg, args);
+  va_end(args);
+
+  return std::string(buffer);
+}
+
+
 extern char* libbase;
 
 void* fail_exit(const char * message, ...) {

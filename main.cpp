@@ -23,20 +23,21 @@ unsigned screen_height = 800;
 Program* ads_program_loader() {
   Program *program = Program::create("ads.vert",
                                      "ads.frag",
-                                     GLPARAM_VERTEX, "vertex",
-                                     GLPARAM_NORMAL0, "normal",
-                                     GLPARAM_TEXCOORD0, "tcoord0",
-                                     GLPARAM_TANGENT0, "tangent",
-                                     GLPARAM_DONE);
+                                     BINDING_ATTRIBUTES,
+                                     ATTRIBUTE_VERTEX, "vertex",
+                                     ATTRIBUTE_NORMAL0, "normal",
+                                     ATTRIBUTE_TEXCOORD0, "tcoord0",
+                                     ATTRIBUTE_TANGENT0, "tangent",
 
-  program_bind_uniforms(program,
-                        UNIFORM_TEX0, "colors",
-                        UNIFORM_TEX1, "norm_spec",
-                        UNIFORM_TEX2, "night_lights",
-                        UNIFORM_MV, "mv",
-                        UNIFORM_LIGHT0_POSITION, "light",
-                        UNIFORM_PERSPECTIVE, "perspective",
-                        UNIFORM_DONE);
+                                     BINDING_UNIFORMS,
+                                     UNIFORM_TEX0, "colors",
+                                     UNIFORM_TEX1, "norm_spec",
+                                     UNIFORM_TEX2, "night_lights",
+                                     UNIFORM_MV, "mv",
+                                     UNIFORM_LIGHT0_POSITION, "light",
+                                     UNIFORM_PERSPECTIVE, "perspective",
+
+                                     BINDING_DONE);
 
   return program;
 }
@@ -44,29 +45,33 @@ Program* ads_program_loader() {
 Program* skybox_program_loader() {
   Program* program = Program::create("skybox.vert",
                                      "skybox.frag",
-                                     GLPARAM_VERTEX, "vertex",
-                                     GLPARAM_DONE);
+                                     BINDING_ATTRIBUTES,
+                                     ATTRIBUTE_VERTEX, "vertex",
 
-  program_bind_uniforms(program,
-                        UNIFORM_TEX0, "colors",
-                        UNIFORM_MV, "mv",
-                        UNIFORM_DONE);
+                                     BINDING_UNIFORMS,
+                                     UNIFORM_TEX0, "colors",
+                                     UNIFORM_MV, "mv",
+
+                                     BINDING_DONE);
+
   return program;
 }
 
 Program* simple_program_loader() {
   Program* program = Program::create("simple.vert",
                                      "simple.frag",
-                                     GLPARAM_VERTEX, "vertex",
-                                     GLPARAM_TEXCOORD0, "tcoord0",
-                                     GLPARAM_NORMAL0, "normal",
-                                     GLPARAM_DONE);
+                                     BINDING_ATTRIBUTES,
+                                     ATTRIBUTE_VERTEX, "vertex",
+                                     ATTRIBUTE_TEXCOORD0, "tcoord0",
+                                     ATTRIBUTE_NORMAL0, "normal",
 
-  program_bind_uniforms(program,
-                        UNIFORM_MV, "mv",
-                        UNIFORM_PERSPECTIVE, "perspective",
-                        UNIFORM_TEX0, "colors",
-                        UNIFORM_DONE);
+                                     BINDING_UNIFORMS,
+                                     UNIFORM_MV, "mv",
+                                     UNIFORM_PERSPECTIVE, "perspective",
+                                     UNIFORM_TEX0, "colors",
+
+                                     BINDING_DONE);
+
   return program;
 }
 
@@ -101,58 +106,31 @@ void render_frame(const TimeLength& dt) {
   ads->use();
 
   // attributes
-  gl_check(glBindBuffer(GL_ARRAY_BUFFER, vbuffer));
-  gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
-  gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
-
-  gl_check(glBindBuffer(GL_ARRAY_BUFFER, nbuffer));
-  gl_check(glEnableVertexAttribArray(GLPARAM_NORMAL0));
-  gl_check(glVertexAttribPointer(GLPARAM_NORMAL0, 3, GL_FLOAT, GL_FALSE, 0, 0));
-
-  gl_check(glBindBuffer(GL_ARRAY_BUFFER, tbuffer));
-  gl_check(glEnableVertexAttribArray(GLPARAM_TEXCOORD0));
-  gl_check(glVertexAttribPointer(GLPARAM_TEXCOORD0, 2, GL_FLOAT, GL_FALSE, 0, 0));
-
-  gl_check(glBindBuffer(GL_ARRAY_BUFFER, tanbuffer));
-  gl_check(glEnableVertexAttribArray(GLPARAM_TANGENT0));
-  gl_check(glVertexAttribPointer(GLPARAM_TANGENT0, 3, GL_FLOAT, GL_FALSE, 0, 0));
+  ads->bind_attribute_buffer(ATTRIBUTE_VERTEX, 3, vbuffer);
+  ads->bind_attribute_buffer(ATTRIBUTE_NORMAL0, 3, nbuffer);
+  ads->bind_attribute_buffer(ATTRIBUTE_TEXCOORD0, 2, tbuffer);
+  ads->bind_attribute_buffer(ATTRIBUTE_TANGENT0, 3, tanbuffer);
 
   // textures
-  colors->bind(0);
-  gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX0), 0));
-
-  norm_spec->bind(1);
-  gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX1), 1));
-
-  night_lights->bind(2);
-  gl_check(glUniform1i(ads->requireUniform(UNIFORM_TEX2), 2));
+  ads->bind_uniform(colors, UNIFORM_TEX0);
+  ads->bind_uniform(norm_spec, UNIFORM_TEX1);
+  ads->bind_uniform(night_lights, UNIFORM_TEX2);
 
   // light
   Point light = w2c * Point(100, 0, 100);
-  gl_check(glUniform3fv(ads->requireUniform(UNIFORM_LIGHT0_POSITION), 1, (float*)&light));
+  ads->bind_uniform(light, UNIFORM_LIGHT0_POSITION);
+  ads->bind_uniform(m, UNIFORM_MV);
+  ads->bind_uniform(perspective, UNIFORM_PERSPECTIVE);
 
-  gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_MV), 1, GL_FALSE, m.data));
-  gl_check(glUniformMatrix4fv(ads->requireUniform(UNIFORM_PERSPECTIVE), 1, GL_FALSE, perspective.data));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, points_size));
-
-
-  gl_check(glDisableVertexAttribArray(GLPARAM_VERTEX));
-  gl_check(glDisableVertexAttribArray(GLPARAM_NORMAL0));
-  gl_check(glDisableVertexAttribArray(GLPARAM_TEXCOORD0));
-  gl_check(glDisableVertexAttribArray(GLPARAM_TANGENT0));
-
 
   // render the skybox
   skybox->use();
 
-  gl_check(glBindBuffer(GL_ARRAY_BUFFER, qverts));
-  gl_check(glEnableVertexAttribArray(GLPARAM_VERTEX));
-  gl_check(glVertexAttribPointer(GLPARAM_VERTEX, 3, GL_FLOAT, GL_FALSE, 0, 0));
+  skybox->bind_attribute_buffer(ATTRIBUTE_VERTEX, 3, qverts);
+  skybox->bind_uniform(stars, UNIFORM_TEX0);
+  skybox->bind_uniform(c2w, UNIFORM_MV);
 
-  // hack... slow down the stars
-  stars->bind(0);
-  gl_check(glUniform1i(skybox->requireUniform(UNIFORM_TEX0), 0));
-  gl_check(glUniformMatrix4fv(skybox->requireUniform(UNIFORM_MV), 1, GL_FALSE, c2w.data));
   gl_check(glDrawArrays(GL_TRIANGLES, 0, 6));
 
   SDL_GL_SwapBuffers();
@@ -419,6 +397,7 @@ int main(int argc, char** argv) {
     if(abs(yrel) > 0) camera.rotateX(yrel * dt.seconds());
     if(abs(xrel) > 0) camera.rotateY(-xrel * dt.seconds());
     camera.forceUp(Vector(0, 1, 0));
+    printf("look: %s  up: %s\n", camera.look.str().c_str(), camera.up.str().c_str());
 
     camera.pos = camera.pos + camera.look * speedz + camera.right() * speedx;
 

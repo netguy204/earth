@@ -1,5 +1,5 @@
 OBJS=\
-	utils.o main.o stb_image.o shaders.o
+	utils.o main.o stb_image.o shaders.o gl_headers.o
 
 CFLAGS+=-DBUILD_SDL
 

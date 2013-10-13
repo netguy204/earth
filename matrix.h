@@ -171,22 +171,19 @@ public:
     elm(2,2) = (one_c * zz) + c;
   }
 
-  inline void print() {
-    printf("%02.3f  %02.3f  %02.3f  %02.3f\n"
-           "%02.3f  %02.3f  %02.3f  %02.3f\n"
-           "%02.3f  %02.3f  %02.3f  %02.3f\n"
-           "%02.3f  %02.3f  %02.3f  %02.3f\n",
-           elm(0,0), elm(0,1), elm(0,2), elm(0,3),
-           elm(1,0), elm(1,1), elm(1,2), elm(1,3),
-           elm(2,0), elm(2,1), elm(2,2), elm(2,3),
-           elm(3,0), elm(3,1), elm(3,2), elm(3,3));
+  inline std::string str() {
+    return stdstring("%02.3f  %02.3f  %02.3f  %02.3f\n"
+                     "%02.3f  %02.3f  %02.3f  %02.3f\n"
+                     "%02.3f  %02.3f  %02.3f  %02.3f\n"
+                     "%02.3f  %02.3f  %02.3f  %02.3f",
+                     elm(0,0), elm(0,1), elm(0,2), elm(0,3),
+                     elm(1,0), elm(1,1), elm(1,2), elm(1,3),
+                     elm(2,0), elm(2,1), elm(2,2), elm(2,3),
+                     elm(3,0), elm(3,1), elm(3,2), elm(3,3));
   }
-
 };
 
-////////////////////////////////////////////////////////////////////////////
-/// This function is not exported by library, just for this modules use only
-// 3x3 determinant
+// lifted from opengl superbible
 static float DetIJ(const Matrix& m, const int i, const int j) {
   int x, y, ii, jj;
   float ret, mat[3][3];
@@ -210,10 +207,7 @@ static float DetIJ(const Matrix& m, const int i, const int j) {
   return ret;
 }
 
-////////////////////////////////////////////////////////////////////////////
-///
-// Invert matrix
-void m3dInvertMatrix44(Matrix& mInverse, const Matrix& m) {
+inline void m3dInvertMatrix44(Matrix& mInverse, const Matrix& m) {
   int i, j;
   float det, detij;
 

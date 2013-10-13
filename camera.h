@@ -63,8 +63,14 @@ public:
     // renormalize our vectors in a way that removes roll and puts the
     // up vector in the world up/look plane.
     look = look.norm();
-    Vector right = look.cross(suggested_up);
-    up = right.cross(look);
+
+    if(fabs(look.dot(suggested_up)) > 0.8) {
+      Vector right = look.cross(up.norm());
+      up = right.cross(look);
+    } else {
+      Vector right = look.cross(suggested_up);
+      up = right.cross(look);
+    }
   }
 
   inline Matrix getPerspectiveTransform() {

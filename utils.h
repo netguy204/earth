@@ -19,6 +19,9 @@
 
 #include <stdio.h>
 #include <sys/time.h>
+#include <string>
+
+std::string stdstring(const char* msg, ...);
 
 typedef struct Timer_ {
   struct timeval val;
@@ -68,5 +71,6 @@ void* fail_exit(const char * message, ...);
 #define LOGW(...) fprintf(stderr, "WARNING: " __VA_ARGS__); fprintf(stderr, "\n")
 
 #endif
+
 
 #endif
