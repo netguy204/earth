@@ -134,6 +134,12 @@ void render_frame(const TimeLength& dt) {
   SDL_GL_SwapBuffers();
 }
 
+float absclamp(float val, float maxabs) {
+  if(val < -maxabs) return -maxabs;
+  if(val > maxabs) return maxabs;
+  return val;
+}
+
 int main(int argc, char** argv) {
   char* output_prefix = NULL;
   int output_frames = 0;
@@ -392,18 +398,21 @@ int main(int argc, char** argv) {
     if(up) speedz = speed;
     if(down) speedz = -speed;
 
-    if(abs(yrel) > 0) camera.rotateX(yrel * dt.seconds());
-    if(abs(xrel) > 0) camera.rotateY(-xrel * dt.seconds());
+    const float maxrot = 1.0;
+    if(abs(yrel) > 0) camera.rotateX(absclamp(yrel, maxrot) * dt.seconds());
+    if(abs(xrel) > 0) camera.rotateY(absclamp(-xrel, maxrot) * dt.seconds());
+
     //camera.forceUp(Vector(0, 1, 0));
     camera.normalize();
-
     camera.moveForward(speedz);
     camera.moveRight(speedx);
 
+    /*
     printf("look: %s  up: %s\n", camera.look.str().c_str(), camera.up.str().c_str());
     printf("pos: %s\n", camera.pos.str().c_str());
     printf("l.u=%f, u.r=%f, r.l=%f\n", camera.look.dot(camera.up), camera.up.dot(camera.axisX()),
            camera.axisX().dot(camera.look));
+    */
 
     // keep the camera looking at world center
     //camera.look = (camera.pos).norm();
