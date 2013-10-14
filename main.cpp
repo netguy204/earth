@@ -16,7 +16,6 @@
 
 #include <vector>
 
-const char* libbase = ".";
 unsigned screen_width = 1280;
 unsigned screen_height = 800;
 
@@ -397,7 +396,7 @@ int main(int argc, char** argv) {
     if(abs(yrel) > 0) camera.rotateX(yrel * dt.seconds());
     if(abs(xrel) > 0) camera.rotateY(-xrel * dt.seconds());
     camera.forceUp(Vector(0, 1, 0));
-    printf("look: %s  up: %s\n", camera.look.str().c_str(), camera.up.str().c_str());
+    //printf("look: %s  up: %s\n", camera.look.str().c_str(), camera.up.str().c_str());
 
     camera.pos = camera.pos + camera.look * speedz + camera.right() * speedx;
 

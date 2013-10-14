@@ -1,5 +1,5 @@
 OBJS=\
-	utils.o main.o stb_image.o shaders.o gl_headers.o
+	utils.o stb_image.o shaders.o gl_headers.o matrix.o
 
 CFLAGS+=-DBUILD_SDL
 
@@ -17,8 +17,11 @@ endif
 %.o: %.cpp
 	$(CXX) $(CFLAGS) -c $<
 
-main: $(OBJS)
-	g++ -o $@ $(OBJS) $(LDFLAGS)
+main: main.o $(OBJS)
+	g++ -o $@ main.o $(OBJS) $(LDFLAGS)
+
+test_quat: test_quat.o $(OBJS)
+	g++ -o $@ test_quat.o $(OBJS) $(LDFLAGS)
 
 clean:
 	rm -rf *.o main

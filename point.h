@@ -1,8 +1,12 @@
 #ifndef POINT_H
 #define POINT_H
 
+#include "utils.h"
+
 #include <vector>
 #include <math.h>
+
+#include <string>
 
 class Point {
 public:

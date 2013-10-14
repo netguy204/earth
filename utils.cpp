@@ -20,6 +20,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+const char* libbase = ".";
+
 std::string stdstring(const char* msg, ...) {
   char buffer[256];
 
@@ -31,8 +33,6 @@ std::string stdstring(const char* msg, ...) {
   return std::string(buffer);
 }
 
-
-extern char* libbase;
 
 void* fail_exit(const char * message, ...) {
   fprintf(stderr, "FAIL_EXIT: ");
