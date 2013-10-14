@@ -20,9 +20,13 @@ public:
 
   static Matrix translation(float x, float y, float z);
 
-  float& elm(unsigned r, unsigned c);
+  inline float& elm(unsigned r, unsigned c) {
+    return data[c*4+r];
+  }
 
-  float elm(unsigned r, unsigned c) const;
+  inline float elm(unsigned r, unsigned c) const {
+    return data[c*4+r];
+  }
 
   Matrix operator*(const Matrix& o);
 
@@ -35,6 +39,8 @@ public:
   void set_translation(float x, float y, float z);
 
   void set_column(unsigned c, const Vector& v);
+
+  void set_row(unsigned r, const Vector& v);
 
   Vector operator*(const Vector& o);
 
@@ -56,6 +62,8 @@ public:
 
   Quaternion operator*(const Quaternion& other) const;
   Vector operator*(const Vector& other) const;
+
+  Quaternion conj() const;
 
   float magnitude() const;
 

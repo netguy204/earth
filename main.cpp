@@ -94,8 +94,7 @@ Matrix perspective(camera.getPerspectiveTransform());
 void render_frame(const TimeLength& dt) {
   Matrix pole_up = Matrix::rotation(-M_PI/2, Vector(1,0,0));
   Matrix o2w = Matrix::rotation(angle, Vector(0,1,0)) * pole_up;
-  Matrix c2w = camera.getCameraToWorld();
-  Matrix w2c = c2w.invertspecial();
+  Matrix w2c = camera.getWorldToCamera();
   Matrix m = w2c * o2w;
 
   angle += dt.seconds() * (2 * M_PI * 0.05); // 1/20 rev per second
@@ -128,7 +127,7 @@ void render_frame(const TimeLength& dt) {
 
   skybox->bind_attribute_buffer(ATTRIBUTE_VERTEX, 3, qverts);
   skybox->bind_uniform(stars, UNIFORM_TEX0);
-  skybox->bind_uniform(c2w, UNIFORM_MV);
+  skybox->bind_uniform(camera.getMatrix(true), UNIFORM_MV);
 
   gl_check(glDrawArrays(GL_TRIANGLES, 0, 6));
 
@@ -395,10 +394,16 @@ int main(int argc, char** argv) {
 
     if(abs(yrel) > 0) camera.rotateX(yrel * dt.seconds());
     if(abs(xrel) > 0) camera.rotateY(-xrel * dt.seconds());
-    camera.forceUp(Vector(0, 1, 0));
-    //printf("look: %s  up: %s\n", camera.look.str().c_str(), camera.up.str().c_str());
+    //camera.forceUp(Vector(0, 1, 0));
+    camera.normalize();
 
-    camera.pos = camera.pos + camera.look * speedz + camera.right() * speedx;
+    camera.moveForward(speedz);
+    camera.moveRight(speedx);
+
+    printf("look: %s  up: %s\n", camera.look.str().c_str(), camera.up.str().c_str());
+    printf("pos: %s\n", camera.pos.str().c_str());
+    printf("l.u=%f, u.r=%f, r.l=%f\n", camera.look.dot(camera.up), camera.up.dot(camera.axisX()),
+           camera.axisX().dot(camera.look));
 
     // keep the camera looking at world center
     //camera.look = (camera.pos).norm();

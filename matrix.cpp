@@ -33,14 +33,6 @@ Matrix Matrix::translation(float x, float y, float z) {
   return m;
 }
 
-float& Matrix::elm(unsigned r, unsigned c) {
-  return data[c*4+r];
-}
-
-float Matrix::elm(unsigned r, unsigned c) const {
-  return data[c*4+r];
-}
-
 Matrix Matrix::operator*(const Matrix& o) {
   Matrix result;
   for(unsigned ii = 0; ii < 4; ++ii) {
@@ -111,6 +103,12 @@ void Matrix::set_column(unsigned c, const Vector& v) {
   elm(0,c) = v.x;
   elm(1,c) = v.y;
   elm(2,c) = v.z;
+}
+
+void Matrix::set_row(unsigned r, const Vector& v) {
+  elm(r,0) = v.x;
+  elm(r,1) = v.y;
+  elm(r,2) = v.z;
 }
 
 Vector Matrix::operator*(const Vector& o) {
@@ -243,8 +241,11 @@ Quaternion Quaternion::operator*(const Quaternion& o) const {
 }
 
 Vector Quaternion::operator*(const Vector& v) const {
-  Quaternion r = *this * Quaternion(0, v.x, v.y, v.z);
-  return Vector(r.x, r.y, r.z);
+  return matrix() * v;
+}
+
+Quaternion Quaternion::conj() const {
+  return Quaternion(w, -x, -y, -z);
 }
 
 float Quaternion::magnitude() const {

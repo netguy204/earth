@@ -4,6 +4,6 @@ uniform mat4 mv;
 varying vec3 vvertex;
 
 void main() {
-  vvertex = transpose(mat3(mv)) * vertex;
+  vvertex = mat3(mv) * vertex;
   gl_Position = vec4(vertex, 1);
 }

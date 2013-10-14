@@ -12,5 +12,6 @@ int main(int argc, char** argv) {
   Vector v1(1,2,3);
   printf(" v1: %s\n v2: %s\n v2': %s\n", (r1*v1).str().c_str(), (q1*v1).str().c_str(),
          (r2 * v1).str().c_str());
+  printf(" v2'': %s\n", (Quaternion(0, v1.x, v1.y, v1.z) * q1).str().c_str());
   return 0;
 }
