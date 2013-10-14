@@ -371,6 +371,7 @@ int main(int argc, char** argv) {
         case SDLK_RIGHT: right = false; break;
         case SDLK_UP: up = false; break;
         case SDLK_DOWN: down = false; break;
+        case SDLK_q: exit(0); break;
         default: break;
         }
         break;
