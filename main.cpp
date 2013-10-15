@@ -50,6 +50,7 @@ Program* skybox_program_loader() {
                                      BINDING_UNIFORMS,
                                      UNIFORM_TEX0, "colors",
                                      UNIFORM_MV, "mv",
+                                     UNIFORM_PERSPECTIVE, "perspective_inv",
 
                                      BINDING_DONE);
 
@@ -127,7 +128,8 @@ void render_frame(const TimeLength& dt) {
 
   skybox->bind_attribute_buffer(ATTRIBUTE_VERTEX, 3, qverts);
   skybox->bind_uniform(stars, UNIFORM_TEX0);
-  skybox->bind_uniform(camera.getMatrix(true), UNIFORM_MV);
+  skybox->bind_uniform(camera.getWorldToCamera(true).invertspecial(), UNIFORM_MV);
+  skybox->bind_uniform(perspective.invert(), UNIFORM_PERSPECTIVE);
 
   gl_check(glDrawArrays(GL_TRIANGLES, 0, 6));
 
@@ -332,6 +334,12 @@ int main(int argc, char** argv) {
     (perspective * c * Vector4(1, 1, z, 1)).point().print();
   }
   */
+
+  for(unsigned ii = 0; ii < sizeof(qpoints) / sizeof(qpoints[0]); ii+=3) {
+    Vector v(qpoints[ii], qpoints[ii+1], qpoints[ii+2]);
+    Vector pv = camera.getMatrix(true) * camera.getPerspectiveTransform().invertspecial() * v;
+    printf("%d: %s\n", ii/3, pv.str().c_str());
+  }
 
   bool left = false;
   bool right = false;
