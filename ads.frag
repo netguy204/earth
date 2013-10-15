@@ -1,5 +1,4 @@
 uniform sampler2D colors;
-uniform sampler2D topo;
 uniform sampler2D norm_spec;
 uniform sampler2D night_lights;
 
@@ -11,17 +10,26 @@ void main() {
   // lightDir and eyeDir are already in tangent space so we can just
   // read our normal
   vec3 normal = normalize(texture2D(norm_spec, tcoord).rgb * 2.0 - 1.0);
+
+  // proportional to the energy received by the surface
+  float diffuseCoeff = dot(normal, lightDir);
+  vec4 nightColor = vec4(0,0,0,0);
+  const float ambient = 0.1;
+
+  if(diffuseCoeff <= 0) {
+    diffuseCoeff = 0;
+    nightColor = texture2D(night_lights, tcoord);
+
+    // only let the bright parts through
+    if(length(vec3(nightColor)) < 0.6) {
+      nightColor = vec4(0,0,0,0);
+    }
+  }
+
   vec3 lightDir = normalize(lightDir);
   vec3 eyeDir = normalize(eyeDir);
 
-  // proportional to the energy received by the surface
-  float diffuseCoeff = clamp(dot(normal, lightDir), 0, 1);
-  float ambientCoeff = 0.1;
-
-  float dayCoeff = clamp(diffuseCoeff + ambientCoeff, 0, 1);
-  float nightCoeff = pow(max(0, 1 - dayCoeff), 20);
-  vec4 color = dayCoeff * texture2D(colors, tcoord)
-    + nightCoeff * texture2D(night_lights, tcoord);
+  vec4 color = (diffuseCoeff + ambient) * texture2D(colors, tcoord) + nightColor;
 
   // constants
   const float shininess = 100;
